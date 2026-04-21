@@ -1,0 +1,78 @@
+name: CI/CD Process
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  check-simulations-native:
+    strategy:
+      matrix:
+        os: [ windows-2022, macos-14, ubuntu-24.04 ]
+    runs-on: ${{ matrix.os }}
+    concurrency:
+      group: sim-check${{ github.workflow }}${{ matrix.os }}${{ github.event.number || github.ref }}
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Create Gurobi license file
+        shell: bash
+        run: |
+          cat <<'EOF' > gurobi.lic
+          ${{ secrets.GRB_LICENSE_FILE }}
+          EOF
+          echo "GRB_LICENSE_FILE=$(pwd)/gurobi.lic" >> $GITHUB_ENV
+      - uses: DanySK/build-check-deploy-gradle-action@4.0.32
+        with:
+          build-command: true
+          check-command: ./gradlew check runAllGraphic
+          deploy-command: true
+          should-validate-wrapper: ${{ contains('Linux', runner.os) }}
+  release:
+    needs:
+      - check-simulations-native
+    runs-on: ubuntu-24.04
+    concurrency:
+      # Only one release job at a time per branch, as only master releases.
+      group: release-${{ github.event.number || github.ref }}
+    if: >-
+      !github.event.repository.fork
+      && (
+        github.event_name != 'pull_request'
+        || github.event.pull_request.head.repo.full_name == github.repository
+      )
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          submodules: recursive
+          token: ${{ secrets.DEPLOYMENT_TOKEN }}
+      - name: Find the version of Node from package.json
+        id: node-version
+        run: echo "version=$(jq -r .engines.node package.json)" >> $GITHUB_OUTPUT
+      - name: Install Node
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: ${{ steps.node-version.outputs.version }}
+      - name: Semantic Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.DEPLOYMENT_TOKEN }}
+        run: |
+          npm install
+          npx semantic-release
+  success:
+    runs-on: ubuntu-24.04
+    needs:
+      - check-simulations-native
+      - release
+    if: >-
+      always() && (
+        contains(join(needs.*.result, ','), 'failure')
+        || !contains(join(needs.*.result, ','), 'cancelled')
+      )
+    steps:
+      - name: Verify that there were no failures
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            exit 1
+          fi

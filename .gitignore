@@ -1,0 +1,14 @@
+# Ignore Gradle project-specific cache directory
+.gradle
+.idea/
+.spyproject/
+build/
+charts/
+data_summary_*
+timeprocessed
+.env
+.kotlin
+.DS_Store
+/node_modules/
+/admm-plots/
+/logging/
