@@ -1,3 +1,9 @@
+## 1.0.0 (2026-06-05)
+
+### Bug Fixes
+
+* update project name ([8a2e786](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/8a2e786b9c143927241c48f8e05cdbf26fe83ac7))
+
 ## [2.8.0](https://github.com/angelacorte/carol-experiments/compare/2.7.0...2.8.0) (2026-04-20)
 
 ### Features
