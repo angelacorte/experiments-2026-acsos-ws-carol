@@ -1,11 +1,11 @@
 # CAROL: Coordinated Aggregate Robotics with Online control Lyapunov and barrier functions
 
-[![Kotlin](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fangelacorte%2Fcarol-experiments%2Fmaster%2Fgradle%2Flibs.versions.toml&query=%24.versions.kotlin&label=Kotlin&color=blue)](https://kotlinlang.org)
-[![Collektive](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fangelacorte%2Fcarol-experiments%2Fmaster%2Fgradle%2Flibs.versions.toml&query=%24.versions.collektive&label=Collektive&color=purple)](https://github.com/Collektive/collektive)
-[![CI/CD](https://github.com/angelacorte/carol-experiments/actions/workflows/dispatcher.yml/badge.svg?branch=master)](https://github.com/angelacorte/carol-experiments/actions/workflows/dispatcher.yml)
-[![Gurobi](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fangelacorte%2Fcarol-experiments%2Fmaster%2Fgradle%2Flibs.versions.toml&query=%24.versions.gurobi&label=Gurobi&color=orange)](https://www.gurobi.com/)
-[![Release](https://img.shields.io/github/v/release/angelacorte/carol-experiments?sort=semver)](https://github.com/angelacorte/carol-experiments/releases)
-[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://github.com/angelacorte/carol-experiments)
+[![Kotlin](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fangelacorte%2Fexperiments-2026-acsos-ws-carol%2Fmaster%2Fgradle%2Flibs.versions.toml&query=%24.versions.kotlin&label=Kotlin&color=blue)](https://kotlinlang.org)
+[![Collektive](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fangelacorte%2Fexperiments-2026-acsos-ws-carol%2Fmaster%2Fgradle%2Flibs.versions.toml&query=%24.versions.collektive&label=Collektive&color=purple)](https://github.com/Collektive/collektive)
+[![CI/CD](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/actions/workflows/dispatcher.yml/badge.svg?branch=master)](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/actions/workflows/dispatcher.yml)
+[![Gurobi](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fangelacorte%2Fexperiments-2026-acsos-ws-carol%2Fmaster%2Fgradle%2Flibs.versions.toml&query=%24.versions.gurobi&label=Gurobi&color=orange)](https://www.gurobi.com/)
+[![Release](https://img.shields.io/github/v/release/angelacorte/experiments-2026-acsos-ws-carol?sort=semver)](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/releases)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](https://github.com/angelacorte/experiments-2026-acsos-ws-carol)
 
 **CAROL** is a fully distributed, multi-robot control framework written in Kotlin. It bridges the gap between **Aggregate Programming** (via the Collektive framework) and **Optimization-based Control** using Control Lyapunov Functions (CLFs) and Control Barrier Functions (CBFs).
 

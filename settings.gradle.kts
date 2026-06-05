@@ -11,4 +11,4 @@ develocity {
     }
 }
 
-rootProject.name = "carol-experiments"
+rootProject.name = "experiments-2026-acsos-ws-carol"
