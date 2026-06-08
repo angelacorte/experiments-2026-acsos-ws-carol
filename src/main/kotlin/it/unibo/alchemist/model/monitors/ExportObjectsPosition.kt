@@ -97,5 +97,34 @@ class ExportObjectsPosition<T>(val dataPath: String) :
         ensureOutputDirectory()
         println("Export objects appended at $dataPath")
     }
+
+    override fun initialized(environment: Environment<T?, Euclidean2DPosition>) {
+        // Reset object CSV files at the beginning of the simulation so previous runs
+        // do not accumulate in the same files.
+        try {
+            ensureOutputDirectory()
+            environment.nodes
+                .filter { it.contains(SimpleMolecule("Obstacle")) }
+                .forEach { obs ->
+                    val file = File(dataPath, "obstacle-${obs.id}.csv")
+                    FileWriter(file, false).buffered().use { writer ->
+                        writer.appendLine("step,time,id,x,y,radius,margin")
+                    }
+                }
+            environment.nodes
+                .filter { it.contains(SimpleMolecule("Target")) }
+                .forEach { tg ->
+                    val id = try {
+                        (tg.getConcentration(SimpleMolecule("Target")) as? Number)?.toInt() ?: tg.id
+                    } catch (_: Exception) { tg.id }
+                    val file = File(dataPath, "target-$id.csv")
+                    FileWriter(file, false).buffered().use { writer ->
+                        writer.appendLine("step,time,id,x,y")
+                    }
+                }
+        } catch (e: Exception) {
+            println("Error resetting object CSVs: ${e.message}")
+        }
+    }
 }
 

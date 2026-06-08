@@ -23,6 +23,26 @@ import java.util.Locale
 class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
     OutputMonitor<T, Euclidean2DPosition> {
 
+    override fun initialized(environment: Environment<T?, Euclidean2DPosition>) {
+        // Reset device CSV files at the beginning of the simulation so previous runs
+        // do not accumulate in the same files.
+        try {
+            ensureOutputDirectory()
+            environment.nodes
+                .filter { it.contains(SimpleMolecule("Robot")) }
+                .forEach { node ->
+                    val mid = node.id
+                    val outputFile = File(dataPath, "positions_node-$mid.csv")
+                    // Overwrite and write header
+                    FileWriter(outputFile, false).buffered().use { writer ->
+                        writer.appendLine("step,time,nodeId,X,Y,safeMargin,commDistance")
+                    }
+                }
+        } catch (e: Exception) {
+            println("Error resetting device CSVs: ${e.message}")
+        }
+    }
+
     private fun ensureOutputDirectory() {
         val outputDir = File(dataPath)
         if (!outputDir.exists() && !outputDir.mkdirs()) error("Cannot create output directory: $dataPath")
