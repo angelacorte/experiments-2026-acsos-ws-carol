@@ -56,6 +56,7 @@ class EntitySample:
     comm_distance: float = 0.0
     radius: float = 0.0
     margin: float = 0.0
+    is_leader: bool = False
 
 
 def parse_args() -> argparse.Namespace:
@@ -232,6 +233,23 @@ def load_samples(
                 comm_distance=as_float(row, "commDistance"),
             )
         )
+        # detect leader flag if present
+        try:
+            is_leader_val = row.get("isLeader")
+            if is_leader_val is not None:
+                robots[-1] = EntitySample(
+                    kind="robot",
+                    entity_id=robot_id,
+                    step=as_float(row, "step"),
+                    time=as_float(row, "time"),
+                    x=as_float(row, "X"),
+                    y=as_float(row, "Y"),
+                    safe_margin=safe_margin,
+                    comm_distance=as_float(row, "commDistance"),
+                    is_leader=str(is_leader_val).strip().lower() in ("true", "1", "yes", "y"),
+                )
+        except Exception:
+            pass
         selected_index = rows.index(row)
         trails[robot_id] = [(as_float(r, "X"), as_float(r, "Y")) for r in rows[: selected_index + 1]]
 
@@ -301,6 +319,49 @@ def alchemist_robot_margin_radius(safe_margin: float) -> float:
     return safe_margin * ALCHEMIST_ROBOT_MARGIN_RADIUS_FACTOR
 
 
+def draw_leader_ring(ax: plt.Axes, x: float, y: float, scale: float = 1.0, color: str = "#FFD700") -> None:
+    """Draw a concentric ring around point (x,y) to mark a leader."""
+    try:
+        x0, x1 = ax.get_xlim()
+        y0, y1 = ax.get_ylim()
+        r = max((x1 - x0), (y1 - y0)) * 0.02 * scale
+    except Exception:
+        r = 0.5 * scale
+    ring = Circle((x, y), r, fill=False, edgecolor=color, linewidth=2.0, zorder=9, alpha=0.9)
+    ax.add_patch(ring)
+
+
+def draw_crown(ax: plt.Axes, x: float, y: float, scale: float = 1.0, color: str = "#FFD700") -> None:
+    """Draw a small crown-shaped polygon near (x,y) in data coordinates.
+
+    The crown size is proportional to the current axis data range so it
+    scales reasonably with different plot extents.
+    """
+    try:
+        x0, x1 = ax.get_xlim()
+        y0, y1 = ax.get_ylim()
+        w = (x1 - x0) * 0.03 * scale
+        h = (y1 - y0) * 0.03 * scale
+    except Exception:
+        w = 0.5 * scale
+        h = 0.5 * scale
+    base_y = y + h * 0.35
+    pts = [
+        (x - w / 2, base_y - h * 0.35),
+        (x - w / 3, base_y + h * 0.6),
+        (x - w / 8, base_y - h * 0.05),
+        (x, base_y + h * 0.9),
+        (x + w / 8, base_y - h * 0.05),
+        (x + w / 3, base_y + h * 0.6),
+        (x + w / 2, base_y - h * 0.35),
+        (x + w / 2, base_y - h * 0.6),
+        (x - w / 2, base_y - h * 0.6),
+    ]
+    poly = Polygon(pts, closed=True, facecolor=color, edgecolor="black", linewidth=0.6, zorder=9)
+    ax.add_patch(poly)
+
+
+
 def draw_snapshot(
     config: ExperimentConfig,
     snapshot: float,
@@ -339,6 +400,8 @@ def draw_snapshot(
     for robot in robots:
         add_circle(ax, robot, alchemist_robot_margin_radius(robot.safe_margin), SAFE_COLOR, 0.18)
         ax.scatter(robot.x, robot.y, s=90, color=ROBOT_COLOR, edgecolors="black", linewidths=0.7, zorder=7)
+        if getattr(robot, "is_leader", False):
+            draw_leader_ring(ax, robot.x, robot.y, scale=1.0, color="#FFD700")
         ax.text(robot.x, robot.y, str(robot.entity_id), ha="center", va="center", fontsize=8, color="white", zorder=8)
 
     for target in targets:
@@ -364,6 +427,7 @@ def draw_snapshot(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
+    fig.savefig(output_path.with_suffix(".pdf"), bbox_inches="tight")
     if show:
         plt.show()
     plt.close(fig)
@@ -407,14 +471,18 @@ def legend_handles(config: ExperimentConfig) -> list[Line2D]:
     return handles
 
 
-def output_name(prefix: str, by: str, snapshot: float) -> str:
+def output_name(prefix: str, by: str, snapshot: float) -> Path:
     # Always use time in output filename; do not expose 'step' labeling
     value = f"{int(round(snapshot))}"
-    return f"{prefix}_time-{value}.png"
+    return Path(prefix) / f"{prefix}_time-{value}.png"
 
 
 def generated_paths(paths: Iterable[Path]) -> str:
-    return "\n".join(f"  - {path}" for path in paths)
+    rendered_paths = []
+    for path in paths:
+        rendered_paths.append(f"  - {path}")
+        rendered_paths.append(f"  - {path.with_suffix('.pdf')}")
+    return "\n".join(rendered_paths)
 
 
 def main() -> int:
@@ -448,4 +516,5 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    #python3 plotting/plot_snapshots.py --config src/main/yaml/followTarget.yml --by time 0 5 10 15 20 25 30
     raise SystemExit(main())

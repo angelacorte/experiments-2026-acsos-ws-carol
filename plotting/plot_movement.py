@@ -51,6 +51,7 @@ class Trajectory:
     y: np.ndarray
     safe_margin: np.ndarray
     comm_distance: np.ndarray
+    is_leader: np.ndarray
     radius: np.ndarray
     margin: np.ndarray
 
@@ -146,19 +147,47 @@ def column(rows: list[dict[str, float]], name: str, default: float = 0.0) -> np.
 def read_devices(data_dir: Path, max_points: int) -> list[Trajectory]:
     trajectories = []
     for path in sorted(data_dir.glob("positions_node-*.csv"), key=sort_key):
-        rows = downsample_rows(numeric_rows(path), max_points)
-        if not rows:
+        with path.open(newline="", encoding="utf-8") as stream:
+            raw_rows = list(csv.DictReader(stream))
+        if not raw_rows:
             continue
-        device_id = int(rows[0].get("nodeId", parse_id(path)))
+        # Downsample by selecting indexes evenly spaced if requested
+        if max_points > 0 and len(raw_rows) > max_points:
+            idxs = np.unique(np.linspace(0, len(raw_rows) - 1, max_points, dtype=int))
+            rows = [raw_rows[i] for i in idxs]
+        else:
+            rows = raw_rows
+        device_id = int(float(rows[0].get("nodeId", parse_id(path))))
+        def to_float(val, default=0.0):
+            try:
+                return float(val)
+            except Exception:
+                return default
+
+        times = np.array([float(round(to_float(r.get("time", "nan")))) for r in rows], dtype=float)
+        xs = np.array([to_float(r.get("X")) for r in rows], dtype=float)
+        ys = np.array([to_float(r.get("Y")) for r in rows], dtype=float)
+        safe_m = np.array([to_float(r.get("safeMargin")) for r in rows], dtype=float)
+        comm_d = np.array([to_float(r.get("commDistance")) for r in rows], dtype=float)
+        # parse isLeader if present; accept true/1/yes
+        def parse_bool(v: str) -> bool:
+            if v is None:
+                return False
+            vs = str(v).strip().lower()
+            return vs in ("true", "1", "yes", "y")
+
+        is_leader_arr = np.array([parse_bool(r.get("isLeader")) for r in rows], dtype=bool)
+
         trajectories.append(
             Trajectory(
                 entity_id=device_id,
                 label=f"Device {device_id}",
-                time=column(rows, "time"),
-                x=column(rows, "X"),
-                y=column(rows, "Y"),
-                safe_margin=column(rows, "safeMargin"),
-                comm_distance=column(rows, "commDistance"),
+                time=times,
+                x=xs,
+                y=ys,
+                safe_margin=safe_m,
+                comm_distance=comm_d,
+                is_leader=is_leader_arr,
                 radius=np.zeros(len(rows), dtype=float),
                 margin=np.zeros(len(rows), dtype=float),
             )
@@ -184,6 +213,7 @@ def read_targets(data_dir: Path, max_points: int) -> list[Trajectory]:
                 y=column(rows, "y"),
                 safe_margin=np.zeros(len(rows), dtype=float),
                 comm_distance=np.zeros(len(rows), dtype=float),
+                is_leader=np.zeros(len(rows), dtype=bool),
                 radius=np.zeros(len(rows), dtype=float),
                 margin=np.zeros(len(rows), dtype=float),
             )
@@ -207,6 +237,7 @@ def read_obstacles(data_dir: Path, max_points: int) -> list[Trajectory]:
                 y=column(rows, "y"),
                 safe_margin=np.zeros(len(rows), dtype=float),
                 comm_distance=np.zeros(len(rows), dtype=float),
+                is_leader=np.zeros(len(rows), dtype=bool),
                 radius=column(rows, "radius"),
                 margin=column(rows, "margin"),
             )
@@ -243,6 +274,27 @@ def add_circle(ax: plt.Axes, x: float, y: float, radius: float, color: str, alph
 
 def robot_margin_radius(safe_margin: float) -> float:
     return safe_margin * ALCHEMIST_ROBOT_MARGIN_RADIUS_FACTOR
+def draw_leader_ring(
+        ax: plt.Axes,
+        x: float,
+        y: float,
+        scale: float = 1.0,
+        color: str = "#FFD700",
+        alpha: float = 0.9,
+) -> None:
+    """Draw a concentric ring around point (x,y) to mark a leader.
+
+    The ring radius is computed relative to the axis range so it remains
+    visible at different zoom levels.
+    """
+    try:
+        x0, x1 = ax.get_xlim()
+        y0, y1 = ax.get_ylim()
+        r = max((x1 - x0), (y1 - y0)) * 0.02 * scale
+    except Exception:
+        r = 0.5 * scale
+    ring = Circle((x, y), r, fill=False, edgecolor=color, linewidth=2.0, zorder=9, alpha=alpha)
+    ax.add_patch(ring)
 
 
 def sampled_indexes(length: int, samples: int) -> np.ndarray:
@@ -267,6 +319,18 @@ def draw_clean_movement(
         add_circle(ax, device.final_x, device.final_y, robot_margin_radius(float(device.safe_margin[-1])), SAFE_COLOR, 0.22, 4)
         ax.scatter(device.final_x, device.final_y, s=95, color=color, edgecolors="black", linewidths=0.8, zorder=6)
         ax.text(device.final_x, device.final_y, str(device.entity_id), ha="center", va="center", fontsize=8, color="white", zorder=7)
+        # mark leader: find the most recent sample where is_leader==True and
+        # draw a conspicuous concentric ring at that position. This highlights
+        # the actual location/time where the node acted as leader.
+        try:
+            leader_idxs = np.where(device.is_leader)[0]
+            if leader_idxs.size > 0:
+                last_idx = int(leader_idxs[-1])
+                lx = float(device.x[last_idx])
+                ly = float(device.y[last_idx])
+                draw_leader_ring(ax, lx, ly, scale=1.25, color="#FFD700")
+        except Exception:
+            pass
 
     for target in targets:
         add_fading_line(ax, target.x, target.y, TARGET_COLOR, linewidth=2.2, min_alpha=0.02, max_alpha=0.48, linestyle="dashed", zorder=1)
@@ -345,6 +409,21 @@ def draw_margin_evolution(
                 alpha=0.08 + 0.14 * progress,
                 zorder=3,
             )
+            # if device was leader at this sampled tick, mark it with a small ring.
+            # Keep past leader rings subtle, but make the latest sampled leader ring clear.
+            try:
+                if bool(device.is_leader[idx_found]):
+                    is_latest_sample = s_idx == len(sample_times) - 1
+                    draw_leader_ring(
+                        ax,
+                        float(device.x[idx_found]),
+                        float(device.y[idx_found]),
+                        scale=0.9 if is_latest_sample else 0.7,
+                        color="#FFD700",
+                        alpha=0.9 if is_latest_sample else 0.35,
+                    )
+            except Exception:
+                pass
         ax.scatter(device.final_x, device.final_y, s=90, color=base_color, edgecolors="black", linewidths=0.8, zorder=6)
         ax.text(device.final_x, device.final_y, str(device.entity_id), ha="center", va="center", fontsize=8, color="white", zorder=7)
 
@@ -393,8 +472,31 @@ def draw_margin_evolution(
         cbar.set_ticks([start_tick, end_tick])
         cbar.set_ticklabels([str(start_tick), str(end_tick)])
 
+        leader_change_time = first_two_to_one_leader_time(devices)
+        if leader_change_time is not None and start_tick <= leader_change_time <= end_tick:
+            cbar.ax.axhline(leader_change_time, color="red", linewidth=2.2)
+
     finish_axes(ax, title, devices, targets, obstacles, legend_handles_margins(devices), output, dpi)
 
+
+def first_two_to_one_leader_time(devices: list[Trajectory]) -> float | None:
+    leader_counts_by_time: dict[float, int] = {}
+
+    for device in devices:
+        for time, is_leader in zip(device.time, device.is_leader):
+            rounded_time = float(round(float(time)))
+            leader_counts_by_time.setdefault(rounded_time, 0)
+            if bool(is_leader):
+                leader_counts_by_time[rounded_time] += 1
+
+    previous_count = None
+    for time in sorted(leader_counts_by_time):
+        current_count = leader_counts_by_time[time]
+        if previous_count == 2 and current_count == 1:
+            return time
+        previous_count = current_count
+
+    return None
 
 def draw_final_obstacles(ax: plt.Axes, obstacles: list[Trajectory]) -> None:
     for obstacle in obstacles:
@@ -437,6 +539,7 @@ def finish_axes(
     output.parent.mkdir(parents=True, exist_ok=True)
     fig = ax.figure
     fig.savefig(output, dpi=dpi, bbox_inches="tight")
+    fig.savefig(output.with_suffix(".pdf"), bbox_inches="tight")
     plt.close(fig)
 
 
@@ -481,6 +584,12 @@ def legend_handles_clean(devices: list[Trajectory]) -> list[Line2D]:
     ]
     if len(devices) > 1:
         handles[0].set_label(f"Devices ({len(devices)})")
+    # If any device has leader samples, add a legend handle for the leader ring
+    try:
+        if any(np.any(d.is_leader) for d in devices):
+            handles.append(Line2D([0], [0], marker="o", color="none", markeredgecolor="#FFD700", markerfacecolor="none", markersize=12, linestyle="None", label="Leader"))
+    except Exception:
+        pass
     return handles
 
 
@@ -492,7 +601,8 @@ def legend_handles_margins(devices: list[Trajectory]) -> list[Line2D]:
 
 
 def output_paths(output_dir: Path, prefix: str) -> tuple[Path, Path]:
-    return output_dir / f"{prefix}_movement.png", output_dir / f"{prefix}_movement_margins.png"
+    experiment_output_dir = output_dir / prefix
+    return experiment_output_dir / f"{prefix}_movement.png", experiment_output_dir / f"{prefix}_movement_margins.png"
 
 
 def main() -> int:
@@ -518,9 +628,12 @@ def main() -> int:
 
     print(f"Loaded {len(devices)} devices, {len(targets)} targets, {len(obstacles)} obstacles.")
     print(f"Wrote {clean_output}")
+    print(f"Wrote {clean_output.with_suffix('.pdf')}")
     print(f"Wrote {margins_output}")
+    print(f"Wrote {margins_output.with_suffix('.pdf')}")
     return 0
 
 
 if __name__ == "__main__":
+    #python3 plotting/plot_movement.py --config src/main/yaml/followLeader.yml
     raise SystemExit(main())
