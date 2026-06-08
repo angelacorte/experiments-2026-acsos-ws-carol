@@ -395,10 +395,10 @@ def legend_handles(config: ExperimentConfig) -> list[Line2D]:
         Line2D([0], [0], color=LINK_COLOR, linewidth=2, alpha=0.65, label="Communication link"),
     ]
     if config.connect_within_distance is not None:
-        handles[-1].set_label(f"Link <= {config.connect_within_distance:g}")
+        handles[-1].set_label(f"Linking distance")
     handles.extend(
         [
-            Line2D([0], [0], marker="o", color=COMM_COLOR, alpha=0.35, markersize=9, label="Max distance radius"),
+            Line2D([0], [0], marker="o", color=COMM_COLOR, alpha=0.35, markersize=9, label="Max communication distance"),
             Line2D([0], [0], marker="X", color="none", markerfacecolor=OBSTACLE_COLOR, markersize=9, label="Obstacle"),
         ]
     )
