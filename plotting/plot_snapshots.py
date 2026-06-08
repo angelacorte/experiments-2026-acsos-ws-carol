@@ -70,13 +70,13 @@ def parse_args() -> argparse.Namespace:
         "snapshots",
         type=float,
         nargs="+",
-        help="Snapshot values. Interpreted as times by default, or as steps with --by step.",
+        help="Snapshot values interpreted as simulation times.",
     )
     parser.add_argument(
         "--config",
         type=Path,
-        default=None,
-        help="Experiment YAML. Used to infer data directory and link radius.",
+        default=Path("src/main/yaml"),
+        help="Experiment name, YAML path, or directory containing YAML experiments. Defaults to src/main/yaml and plots all experiments found there.",
     )
     parser.add_argument(
         "--data-dir",
@@ -85,10 +85,9 @@ def parse_args() -> argparse.Namespace:
         help="Directory containing positions_node-*.csv, target-*.csv, and obstacle-*.csv.",
     )
     parser.add_argument(
-        "--by",
-        choices=("time", "step"),
-        default="time",
-        help="Interpret positional snapshots as simulation times or simulation steps.",
+        "--time",
+        action="store_true",
+        help="Interpret positional snapshots as simulation times (default; kept for CLI clarity).",
     )
     parser.add_argument(
         "--output-dir",
@@ -141,6 +140,7 @@ def parse_config(path: Path | None, data_dir_override: Path | None) -> Experimen
     title = data_dir_override.name if data_dir_override else "snapshot"
 
     if path:
+        path = resolve_config_path(path)
         text = path.read_text(encoding="utf-8")
         title = path.stem
         for match in re.finditer(r"^\s{2}([A-Za-z0-9_]+):\s*&([A-Za-z0-9_]+)\s+(.+)$", text, re.MULTILINE):
@@ -170,6 +170,43 @@ def parse_config(path: Path | None, data_dir_override: Path | None) -> Experimen
         robot_safe_margin=robot_safe_margin,
         title=title,
     )
+
+def parse_configs(path: Path | None, data_dir_override: Path | None) -> list[ExperimentConfig]:
+    if data_dir_override is not None:
+        return [parse_config(path, data_dir_override)]
+
+    if path is None:
+        path = Path("src/main/yaml")
+
+    if path.is_dir():
+        configs: list[ExperimentConfig] = []
+        for yaml_path in sorted([*path.glob("*.yml"), *path.glob("*.yaml")]):
+            try:
+                configs.append(parse_config(yaml_path, None))
+            except Exception as error:
+                print(f"Warning: skipping {yaml_path}: {error}")
+
+        if not configs:
+            raise ValueError(f"No valid experiment YAML files found in {path}")
+
+        return configs
+
+    return [parse_config(path, None)]
+
+def resolve_config_path(path: Path) -> Path:
+    if path.exists():
+        return path
+    yaml_dir = Path("src/main/yaml")
+    if path.suffix in {".yml", ".yaml"}:
+        candidate = yaml_dir / path.name
+        if candidate.exists():
+            return candidate
+    else:
+        for suffix in (".yml", ".yaml"):
+            candidate = yaml_dir / f"{path.name}{suffix}"
+            if candidate.exists():
+                return candidate
+    raise FileNotFoundError(f"Cannot resolve experiment config from {path}")
 
 
 def resolve_number(raw_value: str, variables: dict[str, str | float]) -> float | None:
@@ -201,10 +238,18 @@ def nearest_row(rows: list[dict[str, str]], value: float, by: str) -> dict[str, 
     return min(rows, key=lambda row: abs(as_float(row, by) - value))
 
 
+def exact_row(rows: list[dict[str, str]], value: float, by: str) -> dict[str, str]:
+    if not rows:
+        raise ValueError("Cannot select a snapshot from an empty CSV file.")
+    for row in rows:
+        if math.isclose(as_float(row, by), value):
+            return row
+    raise ValueError(f"Snapshot time {int(round(value))} does not exist in CSV data.")
+
+
 def load_samples(
     data_dir: Path,
     snapshot: float,
-    by: str,
     fallback_robot_safe_margin: float | None,
 ) -> tuple[list[EntitySample], list[EntitySample], list[EntitySample], dict[int, list[tuple[float, float]]]]:
     robots: list[EntitySample] = []
@@ -217,8 +262,10 @@ def load_samples(
 
     for path in sorted(data_dir.glob("positions_node-*.csv"), key=natural_key):
         rows = read_rows(path)
-        # Always select by the 'time' column (we do not use 'step' in plotting)
-        row = nearest_row(rows, snapshot_value, "time")
+        # Always select by the 'time' column (we do not use 'step' in plotting).
+        # Do not silently fall back to the nearest available time: missing snapshots
+        # must be reported to the user and skipped.
+        row = exact_row(rows, snapshot_value, "time")
         robot_id = int(as_float(row, "nodeId", parse_id(path.name)))
         safe_margin = as_float(row, "safeMargin", fallback_robot_safe_margin or 0.0)
         robots.append(
@@ -254,7 +301,7 @@ def load_samples(
         trails[robot_id] = [(as_float(r, "X"), as_float(r, "Y")) for r in rows[: selected_index + 1]]
 
     for path in sorted(data_dir.glob("target-*.csv"), key=natural_key):
-        row = nearest_row(read_rows(path), snapshot_value, "time")
+        row = exact_row(read_rows(path), snapshot_value, "time")
         targets.append(
             EntitySample(
                 kind="target",
@@ -267,7 +314,7 @@ def load_samples(
         )
 
     for path in sorted(data_dir.glob("obstacle-*.csv"), key=natural_key):
-        row = nearest_row(read_rows(path), snapshot_value, "time")
+        row = exact_row(read_rows(path), snapshot_value, "time")
         obstacles.append(
             EntitySample(
                 kind="obstacle",
@@ -365,7 +412,6 @@ def draw_crown(ax: plt.Axes, x: float, y: float, scale: float = 1.0, color: str 
 def draw_snapshot(
     config: ExperimentConfig,
     snapshot: float,
-    by: str,
     output_path: Path,
     dpi: int,
     trail_length: int,
@@ -374,7 +420,6 @@ def draw_snapshot(
     robots, targets, obstacles, trails = load_samples(
         config.data_dir,
         snapshot,
-        by,
         config.robot_safe_margin,
     )
 
@@ -471,7 +516,7 @@ def legend_handles(config: ExperimentConfig) -> list[Line2D]:
     return handles
 
 
-def output_name(prefix: str, by: str, snapshot: float) -> Path:
+def output_name(prefix: str, snapshot: float) -> Path:
     # Always use time in output filename; do not expose 'step' labeling
     value = f"{int(round(snapshot))}"
     return Path(prefix) / f"{prefix}_time-{value}.png"
@@ -481,40 +526,59 @@ def generated_paths(paths: Iterable[Path]) -> str:
     rendered_paths = []
     for path in paths:
         rendered_paths.append(f"  - {path}")
-        rendered_paths.append(f"  - {path.with_suffix('.pdf')}")
+        # rendered_paths.append(f"  - {path.with_suffix('.pdf')}")
     return "\n".join(rendered_paths)
 
 
 def main() -> int:
     args = parse_args()
-    config = parse_config(args.config, args.data_dir)
-    if args.connect_within_distance is not None:
-        config = ExperimentConfig(
-            data_dir=config.data_dir,
-            connect_within_distance=args.connect_within_distance,
-            robot_safe_margin=config.robot_safe_margin,
-            title=config.title,
-        )
-    if args.robot_safe_margin is not None:
-        config = ExperimentConfig(
-            data_dir=config.data_dir,
-            connect_within_distance=config.connect_within_distance,
-            robot_safe_margin=args.robot_safe_margin,
-            title=config.title,
-        )
+    configs = parse_configs(args.config, args.data_dir)
 
-    prefix = args.output_prefix or config.data_dir.name.rstrip("/") or config.title
-    outputs = []
-    for snapshot in args.snapshots:
-        path = args.output_dir / output_name(prefix, args.by, snapshot)
-        draw_snapshot(config, snapshot, args.by, path, args.dpi, args.trail, args.show)
-        outputs.append(path)
+    # Snapshots are always interpreted as times; --time is only a semantic flag.
+    _ = args.time
+
+    all_outputs = []
+
+    for base_config in configs:
+        config = base_config
+
+        if args.connect_within_distance is not None:
+            config = ExperimentConfig(
+                data_dir=config.data_dir,
+                connect_within_distance=args.connect_within_distance,
+                robot_safe_margin=config.robot_safe_margin,
+                title=config.title,
+            )
+
+        if args.robot_safe_margin is not None:
+            config = ExperimentConfig(
+                data_dir=config.data_dir,
+                connect_within_distance=config.connect_within_distance,
+                robot_safe_margin=args.robot_safe_margin,
+                title=config.title,
+            )
+
+        prefix = args.output_prefix or config.data_dir.name.rstrip("/") or config.title
+
+        for snapshot in args.snapshots:
+            path = args.output_dir / output_name(prefix, snapshot)
+
+            try:
+                draw_snapshot(config, snapshot, path, args.dpi, args.trail, args.show)
+            except Exception as error:
+                print(
+                    f"Warning: skipping {config.title} at time {int(round(snapshot))} "
+                    f"({config.data_dir}): {error}"
+                )
+                continue
+
+            all_outputs.append(path)
 
     print("Generated snapshot plots:")
-    print(generated_paths(outputs))
+    print(generated_paths(all_outputs))
+
     return 0
 
 
 if __name__ == "__main__":
-    #python3 plotting/plot_snapshots.py --config src/main/yaml/followTarget.yml --by time 0 5 10 15 20 25 30
     raise SystemExit(main())

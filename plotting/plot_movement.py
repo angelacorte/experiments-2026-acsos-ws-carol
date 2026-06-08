@@ -71,7 +71,12 @@ def parse_args() -> argparse.Namespace:
             "sampled margin-evolution image."
         )
     )
-    parser.add_argument("--config", type=Path, default=None, help="Experiment YAML, used to infer dataPath.")
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("src/main/yaml"),
+        help="Experiment name, YAML path, or directory containing YAML experiments. Defaults to src/main/yaml and plots all experiments found there.",
+    )
     parser.add_argument("--data-dir", type=Path, default=None, help="Directory containing exported CSV files.")
     parser.add_argument("--output-dir", type=Path, default=Path("charts/movement"), help="Output directory.")
     parser.add_argument("--output-prefix", default=None, help="Filename prefix. Defaults to the data directory name.")
@@ -80,7 +85,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--margin-samples",
         type=int,
-        default=12,
+        default=20,
         help="Number of temporal rings per moving entity in the margin-evolution image.",
     )
     parser.add_argument("--dpi", type=int, default=220, help="Output image DPI.")
@@ -91,6 +96,7 @@ def parse_config(path: Path | None, data_dir_override: Path | None, title_overri
     data_dir = data_dir_override
     title = title_override
     if path:
+        path = resolve_config_path(path)
         text = path.read_text(encoding="utf-8")
         data_path = re.search(r'^\s{2}dataPath:\s*&dataPath\s+"?([^"\n#]+)"?', text, re.MULTILINE)
         if data_dir is None and data_path:
@@ -102,6 +108,43 @@ def parse_config(path: Path | None, data_dir_override: Path | None, title_overri
     if title is None:
         title = data_dir.name
     return ExperimentConfig(data_dir=data_dir, title=title)
+
+def parse_configs(path: Path | None, data_dir_override: Path | None, title_override: str | None) -> list[ExperimentConfig]:
+    if data_dir_override is not None:
+        return [parse_config(path, data_dir_override, title_override)]
+
+    if path is None:
+        path = Path("src/main/yaml")
+
+    if path.is_dir():
+        configs: list[ExperimentConfig] = []
+        for yaml_path in sorted([*path.glob("*.yml"), *path.glob("*.yaml")]):
+            try:
+                configs.append(parse_config(yaml_path, None, title_override))
+            except Exception as error:
+                print(f"Warning: skipping {yaml_path}: {error}")
+
+        if not configs:
+            raise ValueError(f"No valid experiment YAML files found in {path}")
+
+        return configs
+
+    return [parse_config(path, None, title_override)]
+
+def resolve_config_path(path: Path) -> Path:
+    if path.exists():
+        return path
+    yaml_dir = Path("src/main/yaml")
+    if path.suffix in {".yml", ".yaml"}:
+        candidate = yaml_dir / path.name
+        if candidate.exists():
+            return candidate
+    else:
+        for suffix in (".yml", ".yaml"):
+            candidate = yaml_dir / f"{path.name}{suffix}"
+            if candidate.exists():
+                return candidate
+    raise FileNotFoundError(f"Cannot resolve experiment config from {path}")
 
 
 def parse_id(path: Path) -> int:
@@ -607,30 +650,46 @@ def output_paths(output_dir: Path, prefix: str) -> tuple[Path, Path]:
 
 def main() -> int:
     args = parse_args()
-    config = parse_config(args.config, args.data_dir, args.title)
-    prefix = args.output_prefix or config.data_dir.name.rstrip("/") or config.title
+    configs = parse_configs(args.config, args.data_dir, args.title)
 
-    devices = read_devices(config.data_dir, args.max_points)
-    targets = read_targets(config.data_dir, args.max_points)
-    obstacles = read_obstacles(config.data_dir, args.max_points)
+    for config in configs:
+        prefix = args.output_prefix or config.data_dir.name.rstrip("/") or config.title
 
-    clean_output, margins_output = output_paths(args.output_dir, prefix)
-    draw_clean_movement(devices, targets, obstacles, clean_output, args.dpi, f"{config.title} movement")
-    draw_margin_evolution(
-        devices,
-        targets,
-        obstacles,
-        margins_output,
-        args.dpi,
-        f"{config.title} margin evolution",
-        args.margin_samples,
-    )
+        try:
+            devices = read_devices(config.data_dir, args.max_points)
+            targets = read_targets(config.data_dir, args.max_points)
+            obstacles = read_obstacles(config.data_dir, args.max_points)
+        except Exception as error:
+            print(f"Warning: skipping {config.title} ({config.data_dir}): {error}")
+            continue
 
-    print(f"Loaded {len(devices)} devices, {len(targets)} targets, {len(obstacles)} obstacles.")
-    print(f"Wrote {clean_output}")
-    print(f"Wrote {clean_output.with_suffix('.pdf')}")
-    print(f"Wrote {margins_output}")
-    print(f"Wrote {margins_output.with_suffix('.pdf')}")
+        clean_output, margins_output = output_paths(args.output_dir, prefix)
+
+        draw_clean_movement(
+            devices,
+            targets,
+            obstacles,
+            clean_output,
+            args.dpi,
+            f"{config.title} movement",
+        )
+
+        draw_margin_evolution(
+            devices,
+            targets,
+            obstacles,
+            margins_output,
+            args.dpi,
+            f"{config.title} margin evolution",
+            args.margin_samples,
+        )
+
+        print(f"Loaded {len(devices)} devices, {len(targets)} targets, {len(obstacles)} obstacles for {config.title}.")
+        print(f"Wrote {clean_output}")
+        print(f"Wrote {clean_output.with_suffix('.pdf')}")
+        print(f"Wrote {margins_output}")
+        print(f"Wrote {margins_output.with_suffix('.pdf')}")
+
     return 0
 
 
