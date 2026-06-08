@@ -1,3 +1,13 @@
+## [1.0.1](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.0.0...1.0.1) (2026-06-08)
+
+### Dependency updates
+
+* **core-deps:** update collektive to v28.2.5 ([#2](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/issues/2)) ([78efbac](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/78efbac4e8e8fe42f81b660c9816424d687a1032))
+
+### General maintenance
+
+* **release:** update gradle.properties .env versions to 1.0.0 [skip ci] ([2f55ce0](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/2f55ce021793b8bcc9bfb50ce772964487af20bc))
+
 ## 1.0.0 (2026-06-05)
 
 ### Bug Fixes
