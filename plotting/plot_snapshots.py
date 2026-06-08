@@ -211,9 +211,13 @@ def load_samples(
     obstacles: list[EntitySample] = []
     trails: dict[int, list[tuple[float, float]]] = {}
 
+    # Interpret requested snapshot times as integer ticks (round).
+    snapshot_value = float(round(snapshot))
+
     for path in sorted(data_dir.glob("positions_node-*.csv"), key=natural_key):
         rows = read_rows(path)
-        row = nearest_row(rows, snapshot, by)
+        # Always select by the 'time' column (we do not use 'step' in plotting)
+        row = nearest_row(rows, snapshot_value, "time")
         robot_id = int(as_float(row, "nodeId", parse_id(path.name)))
         safe_margin = as_float(row, "safeMargin", fallback_robot_safe_margin or 0.0)
         robots.append(
@@ -232,7 +236,7 @@ def load_samples(
         trails[robot_id] = [(as_float(r, "X"), as_float(r, "Y")) for r in rows[: selected_index + 1]]
 
     for path in sorted(data_dir.glob("target-*.csv"), key=natural_key):
-        row = nearest_row(read_rows(path), snapshot, by)
+        row = nearest_row(read_rows(path), snapshot_value, "time")
         targets.append(
             EntitySample(
                 kind="target",
@@ -245,7 +249,7 @@ def load_samples(
         )
 
     for path in sorted(data_dir.glob("obstacle-*.csv"), key=natural_key):
-        row = nearest_row(read_rows(path), snapshot, by)
+        row = nearest_row(read_rows(path), snapshot_value, "time")
         obstacles.append(
             EntitySample(
                 kind="obstacle",
@@ -351,9 +355,7 @@ def draw_snapshot(
         ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color="#1d5d1d")
 
     set_limits(ax, robots, targets, obstacles)
-    actual_time = sum(robot.time for robot in robots) / len(robots)
-    actual_step = sum(robot.step for robot in robots) / len(robots)
-    ax.set_title(f"{config.title} | {by}={snapshot:g} (nearest: time={actual_time:.3f}, step={actual_step:.0f})")
+    ax.set_title(f"{config.title} | simulation time={int(round(snapshot))}s")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_aspect("equal", adjustable="box")
@@ -406,8 +408,9 @@ def legend_handles(config: ExperimentConfig) -> list[Line2D]:
 
 
 def output_name(prefix: str, by: str, snapshot: float) -> str:
-    value = f"{snapshot:g}".replace("-", "m").replace(".", "p")
-    return f"{prefix}_{by}-{value}.png"
+    # Always use time in output filename; do not expose 'step' labeling
+    value = f"{int(round(snapshot))}"
+    return f"{prefix}_time-{value}.png"
 
 
 def generated_paths(paths: Iterable[Path]) -> str:

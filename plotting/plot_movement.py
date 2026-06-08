@@ -131,6 +131,9 @@ def numeric_rows(path: Path) -> list[dict[str, float]]:
                     parsed[column] = float(value)
                 except (TypeError, ValueError):
                     parsed[column] = float("nan")
+            # Always round the 'time' column to integer ticks for plotting.
+            if not np.isnan(parsed.get("time", float("nan"))):
+                parsed["time"] = float(round(parsed["time"]))
             if not np.isnan(parsed.get("time", float("nan"))):
                 rows.append(parsed)
     return rows

@@ -8,10 +8,14 @@ import it.unibo.alchemist.model.positions.Euclidean2DPosition
 import java.io.File
 import java.io.FileWriter
 import java.util.Locale
+import kotlin.math.roundToLong
 
 @Suppress("unused")
 class ExportObjectsPosition<T>(val dataPath: String) :
     OutputMonitor<T, Euclidean2DPosition>  {
+
+    private val lastExportedObstacleTick: MutableMap<Int, Long> = mutableMapOf()
+    private val lastExportedTargetTick: MutableMap<Int, Long> = mutableMapOf()
 
     private fun ensureOutputDirectory() {
         val outputDir = File(dataPath)
@@ -33,30 +37,28 @@ class ExportObjectsPosition<T>(val dataPath: String) :
         else -> error("Expected numeric value, found $this")
     }
 
-    private fun appendTarget(targetId: Int, time: Time, step: Long, position: Euclidean2DPosition) {
+    private fun appendTarget(targetId: Int, time: Time, position: Euclidean2DPosition) {
         val file = File(dataPath, "target-$targetId.csv")
         val row = listOf(
-            step,
-            String.format(Locale.US, "%.6f", time.toDouble()),
+            String.format(Locale.US, "%d", time.toDouble().roundToLong()),
             targetId,
             String.format(Locale.US, "%.4f", position.x),
             String.format(Locale.US, "%.4f", position.y),
         ).joinToString(",")
-        appendCsvRow(file, "step,time,id,x,y", row)
+        appendCsvRow(file, "time,id,x,y", row)
     }
 
-    private fun appendObstacle(obstacleId: Int, time: Time, step: Long, position: Euclidean2DPosition, radius: Double, margin: Double) {
+    private fun appendObstacle(obstacleId: Int, time: Time, position: Euclidean2DPosition, radius: Double, margin: Double) {
         val file = File(dataPath, "obstacle-$obstacleId.csv")
         val row = listOf(
-            step,
-            String.format(Locale.US, "%.6f", time.toDouble()),
+            String.format(Locale.US, "%d", time.toDouble().roundToLong()),
             obstacleId,
             String.format(Locale.US, "%.4f", position.x),
             String.format(Locale.US, "%.4f", position.y),
             String.format(Locale.US, "%.4f", radius),
             String.format(Locale.US, "%.4f", margin),
         ).joinToString(",")
-        appendCsvRow(file, "step,time,id,x,y,radius,margin", row)
+        appendCsvRow(file, "time,id,x,y,radius,margin", row)
     }
 
     override fun stepDone(
@@ -72,21 +74,31 @@ class ExportObjectsPosition<T>(val dataPath: String) :
                 .filter { it.contains(SimpleMolecule("Obstacle")) }
                 .forEach { obstacle ->
                     val position = environment.getPosition(obstacle)
-                    appendObstacle(
-                        obstacle.id,
-                        time,
-                        step,
-                        position,
-                        obstacle.getConcentration(SimpleMolecule("SafeRadius")).asDouble(),
-                        obstacle.getConcentration(SimpleMolecule("SafeMargin")).asDouble(),
-                    )
+                    val tick = time.toDouble().roundToLong()
+                    val oid = obstacle.id
+                    if (lastExportedObstacleTick[oid] != tick) {
+                        appendObstacle(
+                            oid,
+                            time,
+                            position,
+                            obstacle.getConcentration(SimpleMolecule("SafeRadius")).asDouble(),
+                            obstacle.getConcentration(SimpleMolecule("SafeMargin")).asDouble(),
+                        )
+                        lastExportedObstacleTick[oid] = tick
+                    }
                 }
 
             environment.nodes
                 .filter { it.contains(SimpleMolecule("Target")) }
                 .forEach { target ->
-                    val targetID = target.getConcentration(SimpleMolecule("Target")) as Int
-                    appendTarget(targetID, time, step, environment.getPosition(target))
+                    val tick = time.toDouble().roundToLong()
+                    val targetID = try {
+                        (target.getConcentration(SimpleMolecule("Target")) as? Number)?.toInt() ?: target.id
+                    } catch (_: Exception) { target.id }
+                    if (lastExportedTargetTick[targetID] != tick) {
+                        appendTarget(targetID, time, environment.getPosition(target))
+                        lastExportedTargetTick[targetID] = tick
+                    }
                 }
         } catch (e: Exception) {
             println(e.message)
@@ -108,7 +120,7 @@ class ExportObjectsPosition<T>(val dataPath: String) :
                 .forEach { obs ->
                     val file = File(dataPath, "obstacle-${obs.id}.csv")
                     FileWriter(file, false).buffered().use { writer ->
-                        writer.appendLine("step,time,id,x,y,radius,margin")
+                        writer.appendLine("time,id,x,y,radius,margin")
                     }
                 }
             environment.nodes
@@ -119,9 +131,11 @@ class ExportObjectsPosition<T>(val dataPath: String) :
                     } catch (_: Exception) { tg.id }
                     val file = File(dataPath, "target-$id.csv")
                     FileWriter(file, false).buffered().use { writer ->
-                        writer.appendLine("step,time,id,x,y")
+                        writer.appendLine("time,id,x,y")
                     }
                 }
+            lastExportedObstacleTick.clear()
+            lastExportedTargetTick.clear()
         } catch (e: Exception) {
             println("Error resetting object CSVs: ${e.message}")
         }

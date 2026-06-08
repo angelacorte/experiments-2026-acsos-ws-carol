@@ -10,6 +10,7 @@ import it.unibo.collektive.model.Coordinate
 import java.io.File
 import java.io.FileWriter
 import java.util.Locale
+import kotlin.math.roundToLong
 
 /**
  * Exports the scene state over time so experiments can be plotted outside the Alchemist GUI.
@@ -23,6 +24,8 @@ import java.util.Locale
 class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
     OutputMonitor<T, Euclidean2DPosition> {
 
+    private val lastExportedTick: MutableMap<Int, Long> = mutableMapOf()
+
     override fun initialized(environment: Environment<T?, Euclidean2DPosition>) {
         // Reset device CSV files at the beginning of the simulation so previous runs
         // do not accumulate in the same files.
@@ -35,9 +38,10 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
                     val outputFile = File(dataPath, "positions_node-$mid.csv")
                     // Overwrite and write header
                     FileWriter(outputFile, false).buffered().use { writer ->
-                        writer.appendLine("step,time,nodeId,X,Y,safeMargin,commDistance")
+                        writer.appendLine("time,nodeId,X,Y,safeMargin,commDistance")
                     }
                 }
+            lastExportedTick.clear()
         } catch (e: Exception) {
             println("Error resetting device CSVs: ${e.message}")
         }
@@ -48,15 +52,16 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
         if (!outputDir.exists() && !outputDir.mkdirs()) error("Cannot create output directory: $dataPath")
     }
 
-    private fun appendPosition(nodeId: Int, time: Time, step: Long, position: Coordinate, safeMargin: Double, commDistance: Double) {
+    private fun appendPosition(nodeId: Int, time: Time, position: Coordinate, safeMargin: Double, commDistance: Double) {
         val outputFile = File(dataPath, "positions_node-$nodeId.csv")
         val writeHeader = !outputFile.exists() || outputFile.length() == 0L
         FileWriter(outputFile, true).buffered().use { writer ->
             if (writeHeader) {
-                writer.appendLine("step,time,nodeId,X,Y,safeMargin,commDistance")
+                writer.appendLine("time,nodeId,X,Y,safeMargin,commDistance")
             }
+            val tick = time.toDouble().roundToLong()
             writer.appendLine(
-                "${step},${String.format(Locale.US, "%.6f", time.toDouble())},$nodeId,${String.format(Locale.US, "%.4f", position.x)},${String.format(Locale.US, "%.4f", position.y)},${String.format(Locale.US, "%.4f", safeMargin)},${String.format(Locale.US, "%.4f", commDistance)}"
+                "${tick},$nodeId,${String.format(Locale.US, "%.4f", position.x)},${String.format(Locale.US, "%.4f", position.y)},${String.format(Locale.US, "%.4f", safeMargin)},${String.format(Locale.US, "%.4f", commDistance)}"
             )
         }
     }
@@ -77,7 +82,11 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
                 val position = environment.getPosition(node)
                 val safeMargin = node.getConcentration(SimpleMolecule("SafeMargin")) as? Double ?: 0.0
                 val commDistance = node.getConcentration(SimpleMolecule("CommunicationDistance")) as? Double ?: 0.0
-                appendPosition(mid, time, step, Coordinate(position.x, position.y), safeMargin, commDistance)
+                val tick = time.toDouble().roundToLong()
+                if (lastExportedTick[mid] != tick) {
+                    appendPosition(mid, time, Coordinate(position.x, position.y), safeMargin, commDistance)
+                    lastExportedTick[mid] = tick
+                }
             }
         } catch (e: Exception) {
             println(e.message)
