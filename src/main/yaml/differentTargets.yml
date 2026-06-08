@@ -1,14 +1,14 @@
 incarnation: collektive
 
 variables:
+  dataPath: &dataPath "data/different-targets/"
   connectWithinDistance: &connectWithinDistance 10.0
-  robotSafeMargin: &robotSafeMargin 1.0
+  robotSafeMargin: &robotSafeMargin 4.0
   robotMaxSpeed: &robotMaxSpeed 4.0
-  moveTargetTime1: &moveTargetTime1 80.0
-  moveTargetTime2: &moveTargetTime2 140.0
+  moveTargetTime1: &moveTargetTime1 20.0
   timeDistribution: &timeDistribution 100.0 # 10 ms
-  obstacleRadius: &obstacleRadius 3.0
-  obstacleMargin: &obstacleMargin 2.0
+  obstacleRadius: &obstacleRadius 2.0
+  obstacleMargin: &obstacleMargin 1.5
   controlPeriodMS: &controlPeriodMS 100.0 #ms
   constraintPrefix:
     formula: |
@@ -37,7 +37,11 @@ variables:
       import it.unibo.collektive.admm.Tolerance
       val tolerance = Tolerance(primalTolerance, dualTolerance)
       SimulationQpSettings("qp", false, rhoADMM, rhoResidual, rhoSlack, tolerance)
-
+  seed: &seed
+    min: 0
+    max: 2
+    default: 42
+    step: 1
 
 network-model:
   type: ConnectWithinDistance
@@ -59,14 +63,6 @@ environment:
     - time-distribution:
         type: Trigger
         parameters: [ *moveTargetTime1 ]
-      type: MoveTarget
-      parameters:
-        - 15.0
-        - 0.0
-        - 1
-    - time-distribution:
-        type: Trigger
-        parameters: [ *moveTargetTime2 ]
       type: MoveTarget
       parameters:
         - 0.0
@@ -187,3 +183,9 @@ deployments:
         concentration: *obstacleRadius
       - molecule: SafeMargin
         concentration: *obstacleMargin
+
+monitors:
+  - type: it.unibo.alchemist.model.monitors.ExportDevicePositions
+    parameters: [*seed, *dataPath]
+  - type: it.unibo.alchemist.model.monitors.ExportObjectsPosition
+    parameters: [*dataPath]

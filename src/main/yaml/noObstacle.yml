@@ -1,6 +1,7 @@
 incarnation: collektive
 
 variables:
+  dataPath: &dataPath "data/no-obstacles/"
   connectWithinDistance: &connectWithinDistance 10.0
   robotSafeMargin: &robotSafeMargin 1.0
   robotMaxSpeed: &robotMaxSpeed 2.0
@@ -35,6 +36,11 @@ variables:
       import it.unibo.collektive.admm.Tolerance
       val tolerance = Tolerance(primalTolerance, dualTolerance)
       SimulationQpSettings("qp", false, rhoADMM, rhoResidual, rhoSlack, tolerance)
+  seed: &seed
+    min: 0
+    max: 2
+    default: 42
+    step: 1
 
 network-model:
   type: ConnectWithinDistance
@@ -174,3 +180,13 @@ deployments:
     contents:
       - molecule: Target
         concentration: 2
+
+terminate:
+  type: AfterTime
+  parameters: [ 120.0 ]
+
+monitors:
+  - type: it.unibo.alchemist.model.monitors.ExportDevicePositions
+    parameters: [*seed, *dataPath]
+  - type: it.unibo.alchemist.model.monitors.ExportObjectsPosition
+    parameters: [ *dataPath ]

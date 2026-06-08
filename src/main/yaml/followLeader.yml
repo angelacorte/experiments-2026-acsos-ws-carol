@@ -1,6 +1,8 @@
 incarnation: collektive
 
 variables:
+  dataPath: &dataPath "data/follow-leader/"
+  experimentName: &experimentName "follow-leader"
   maxCommDistance: &maxCommDistance 9.0
   connectWithinDistance: &connectWithinDistance 10.0
   robotSafeMargin: &robotSafeMargin 1.0
@@ -94,6 +96,11 @@ environment:
         - 20.0
         - 0.0
         - 1
+  seed: &seed
+    min: 0
+    max: 2
+    default: 42
+    step: 1
 
 deployments:
   - type: Point
@@ -211,3 +218,9 @@ deployments:
         concentration: *obstacleRadius
       - molecule: SafeMargin
         concentration: *obstacleMargin
+
+monitors:
+  - type: it.unibo.alchemist.model.monitors.ExportDevicePositions
+    parameters: [*seed, *dataPath]
+  - type: it.unibo.alchemist.model.monitors.ExportObjectsPosition
+    parameters: [*dataPath]
