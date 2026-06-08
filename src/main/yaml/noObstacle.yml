@@ -3,10 +3,10 @@ incarnation: collektive
 variables:
   dataPath: &dataPath "data/no-obstacles/"
   connectWithinDistance: &connectWithinDistance 10.0
-  robotSafeMargin: &robotSafeMargin 1.0
+  robotSafeMargin: &robotSafeMargin 2.0
   robotMaxSpeed: &robotMaxSpeed 2.0
-  moveTargetTime1: &moveTargetTime1 40.0
-  moveTargetTime2: &moveTargetTime2 90.0
+#  moveTargetTime1: &moveTargetTime1 40.0
+#  moveTargetTime2: &moveTargetTime2 90.0
   timeDistribution: &timeDistribution 100.0 # times in a second > 100 = 10 ms
   controlPeriodMS: &controlPeriodMS 100.0 #ms
   constraintPrefix:
@@ -55,26 +55,26 @@ _pool: &program
       - type: SpeedToTarget
         parameters: []
 
-environment:
-  type: Continuous2DEnvironment
-  parameters: [ ]
-  global-programs:
-    - time-distribution:
-        type: Trigger
-        parameters: [ *moveTargetTime1 ]
-      type: MoveTarget
-      parameters:
-        - 15.0
-        - 0.0
-        - 1
-    - time-distribution:
-        type: Trigger
-        parameters: [ *moveTargetTime2 ]
-      type: MoveTarget
-      parameters:
-        - 0.0
-        - 15.0
-        - 1
+#environment:
+#  type: Continuous2DEnvironment
+#  parameters: [ ]
+#  global-programs:
+#    - time-distribution:
+#        type: Trigger
+#        parameters: [ *moveTargetTime1 ]
+#      type: MoveTarget
+#      parameters:
+#        - 15.0
+#        - 0.0
+#        - 1
+#    - time-distribution:
+#        type: Trigger
+#        parameters: [ *moveTargetTime2 ]
+#      type: MoveTarget
+#      parameters:
+#        - 0.0
+#        - 15.0
+#        - 1
 
 deployments:
   - type: Point
@@ -183,7 +183,7 @@ deployments:
 
 terminate:
   type: AfterTime
-  parameters: [ 120.0 ]
+  parameters: [ 70.0 ]
 
 monitors:
   - type: it.unibo.alchemist.model.monitors.ExportDevicePositions

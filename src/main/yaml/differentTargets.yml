@@ -3,9 +3,9 @@ incarnation: collektive
 variables:
   dataPath: &dataPath "data/different-targets/"
   connectWithinDistance: &connectWithinDistance 10.0
-  robotSafeMargin: &robotSafeMargin 4.0
-  robotMaxSpeed: &robotMaxSpeed 4.0
-  moveTargetTime1: &moveTargetTime1 20.0
+  robotSafeMargin: &robotSafeMargin 2.0
+  robotMaxSpeed: &robotMaxSpeed 2.0
+#  moveTargetTime1: &moveTargetTime1 20.0
   timeDistribution: &timeDistribution 100.0 # 10 ms
   obstacleRadius: &obstacleRadius 2.0
   obstacleMargin: &obstacleMargin 1.5
@@ -56,18 +56,18 @@ _pool: &program
       - type: SpeedToTarget
         parameters: [ ]
 
-environment:
-  type: Continuous2DEnvironment
-  parameters: [ ]
-  global-programs:
-    - time-distribution:
-        type: Trigger
-        parameters: [ *moveTargetTime1 ]
-      type: MoveTarget
-      parameters:
-        - 0.0
-        - 17.0
-        - 1
+#environment:
+#  type: Continuous2DEnvironment
+#  parameters: [ ]
+#  global-programs:
+#    - time-distribution:
+#        type: Trigger
+#        parameters: [ *moveTargetTime1 ]
+#      type: MoveTarget
+#      parameters:
+#        - 0.0
+#        - 17.0
+#        - 1
 
 deployments:
   - type: Point
@@ -189,3 +189,7 @@ monitors:
     parameters: [*seed, *dataPath]
   - type: it.unibo.alchemist.model.monitors.ExportObjectsPosition
     parameters: [*dataPath]
+
+terminate:
+  type: AfterTime
+  parameters: 60.0

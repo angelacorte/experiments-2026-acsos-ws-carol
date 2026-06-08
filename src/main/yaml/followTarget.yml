@@ -2,15 +2,15 @@ incarnation: collektive
 
 variables:
   dataPath: &dataPath "data/follow-target/"
-  maxCommDistance: &maxCommDistance 9.0
+  maxCommDistance: &maxCommDistance 8.0
   connectWithinDistance: &connectWithinDistance 10.0
-  robotSafeMargin: &robotSafeMargin 1.0
+  robotSafeMargin: &robotSafeMargin 2.0
   robotMaxSpeed: &robotMaxSpeed 2.0
-  moveTargetTime1: &moveTargetTime1 40.0
-  moveTargetTime2: &moveTargetTime2 90.0
+#  moveTargetTime1: &moveTargetTime1 40.0
+#  moveTargetTime2: &moveTargetTime2 90.0
   timeDistribution: &timeDistribution 100.0 # times in a second > 100 = 10 ms
-  obstacleRadius: &obstacleRadius 3.0
-  obstacleMargin: &obstacleMargin 2.0
+  obstacleRadius: &obstacleRadius 2.0
+  obstacleMargin: &obstacleMargin 1.5
   controlPeriodMS: &controlPeriodMS 100.0 #ms
   constraintPrefix:
     formula: |
@@ -66,23 +66,23 @@ _pool: &program
 environment:
   type: Continuous2DEnvironment
   parameters: [ ]
-  global-programs:
-    - time-distribution:
-        type: Trigger
-        parameters: [ *moveTargetTime1 ]
-      type: MoveTarget
-      parameters:
-        - 15.0
-        - 0.0
-        - 1
-    - time-distribution:
-        type: Trigger
-        parameters: [ *moveTargetTime2 ]
-      type: MoveTarget
-      parameters:
-        - 0.0
-        - 15.0
-        - 1
+#  global-programs:
+#    - time-distribution:
+#        type: Trigger
+#        parameters: [ *moveTargetTime1 ]
+#      type: MoveTarget
+#      parameters:
+#        - 15.0
+#        - 0.0
+#        - 1
+#    - time-distribution:
+#        type: Trigger
+#        parameters: [ *moveTargetTime2 ]
+#      type: MoveTarget
+#      parameters:
+#        - 0.0
+#        - 15.0
+#        - 1
 
 deployments:
   - type: Point
@@ -209,4 +209,4 @@ monitors:
 
 terminate:
   type: AfterTime
-  parameters: 100.0
+  parameters: 50.0
