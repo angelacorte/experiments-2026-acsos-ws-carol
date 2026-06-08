@@ -22,7 +22,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.collections import LineCollection
-from matplotlib.colors import to_rgba
+from matplotlib.colors import to_rgba, Normalize
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 
@@ -287,54 +287,111 @@ def draw_margin_evolution(
     margin_samples: int,
 ) -> None:
     fig, ax = plt.subplots(figsize=(12, 8), constrained_layout=True)
+    # Compute a global set of equally-spaced sample times (integer ticks) so that
+    # rings belonging to the same sampled time across different entities share
+    # the same visual cue (color). This makes it easy to identify which drawn
+    # circles correspond to the same snapshot in time.
+    all_times = np.concatenate([d.time for d in [*devices, *targets, *obstacles] if len(d.time) > 0]) if any(
+        len(d.time) > 0 for d in [*devices, *targets, *obstacles]
+    ) else np.array([])
+    if all_times.size == 0:
+        # Nothing to draw
+        finish_axes(ax, title, devices, targets, obstacles, legend_handles_margins(devices), output, dpi)
+        return
 
+    min_t = float(np.nanmin(all_times))
+    max_t = float(np.nanmax(all_times))
+    if margin_samples <= 0:
+        sample_times = [int(round(min_t))]
+    else:
+        sample_times = np.unique(np.round(np.linspace(min_t, max_t, margin_samples))).astype(int).tolist()
+
+    # Build a discrete colormap for sample times. Use viridis (blu-verde-giallo)
+    # so progression is visually intuitive from cold->warm.
+    cmap = plt.get_cmap("viridis", max(1, len(sample_times)))
+
+    def find_nearest_index(times: np.ndarray, target: int) -> int:
+        if times.size == 0:
+            return -1
+        return int(np.argmin(np.abs(times - float(target))))
+
+    # Draw targets (trajectories) with dashed lines as before
     for target in targets:
-        add_fading_line(ax, target.x, target.y, TARGET_COLOR, linewidth=1.8, min_alpha=0.015, max_alpha=0.32, linestyle="dashed", zorder=1)
+        add_fading_line(ax, target.x, target.y, TARGET_COLOR, linewidth=1.8, min_alpha=0.15, max_alpha=0.52, linestyle="dashed", zorder=1)
         ax.scatter(target.final_x, target.final_y, marker="*", s=220, color=TARGET_COLOR, edgecolors="black", linewidths=0.7, zorder=5)
 
+    # Draw devices: for each global sample time try to find the nearest point
+    # of this device and draw a sampled safety-radius circle using a color
+    # that is shared across all entities for that same snapshot time.
     for index, device in enumerate(devices):
-        color = DEVICE_COLORS[index % len(DEVICE_COLORS)]
-        add_fading_line(ax, device.x, device.y, color, linewidth=1.3, min_alpha=0.012, max_alpha=0.52, zorder=2)
-        ring_indexes = sampled_indexes(len(device.x), margin_samples)
-        for ring_number, point_index in enumerate(ring_indexes):
-            progress = ring_number / max(len(ring_indexes) - 1, 1)
+        base_color = DEVICE_COLORS[index % len(DEVICE_COLORS)]
+        add_fading_line(ax, device.x, device.y, base_color, linewidth=1.3, min_alpha=0.12, max_alpha=0.72, zorder=2)
+        for s_idx, st in enumerate(sample_times):
+            idx_found = find_nearest_index(device.time, st)
+            if idx_found < 0:
+                continue
+            # Accept the nearest point only if it is reasonably close to the
+            # sampled tick (times are integer ticks): allow a tolerance of 0.5
+            if abs(device.time[idx_found] - st) > 0.5:
+                continue
+            progress = s_idx / max(len(sample_times) - 1, 1)
+            color = cmap(s_idx)
             add_circle(
                 ax,
-                float(device.x[point_index]),
-                float(device.y[point_index]),
-                robot_margin_radius(float(device.safe_margin[point_index])),
-                color,
+                float(device.x[idx_found]),
+                float(device.y[idx_found]),
+                robot_margin_radius(float(device.safe_margin[idx_found])),
+                color=color,
                 alpha=0.08 + 0.14 * progress,
                 zorder=3,
             )
-        ax.scatter(device.final_x, device.final_y, s=90, color=color, edgecolors="black", linewidths=0.8, zorder=6)
+        ax.scatter(device.final_x, device.final_y, s=90, color=base_color, edgecolors="black", linewidths=0.8, zorder=6)
         ax.text(device.final_x, device.final_y, str(device.entity_id), ha="center", va="center", fontsize=8, color="white", zorder=7)
 
+    # Draw obstacles sampled at the same global times. If there is little
+    # variation across sampled states, draw just the final circles as before.
     for obstacle in obstacles:
         add_fading_line(ax, obstacle.x, obstacle.y, OBSTACLE_COLOR, linewidth=1.2, min_alpha=0.012, max_alpha=0.3, zorder=1)
-        ring_indexes = sampled_indexes(len(obstacle.x), margin_samples)
-        sampled_states = {
-            (
-                round(float(obstacle.x[point_index]), 6),
-                round(float(obstacle.y[point_index]), 6),
-                round(float(obstacle.radius[point_index]), 6),
-                round(float(obstacle.margin[point_index]), 6),
-            )
-            for point_index in ring_indexes
-        }
+        sampled_states = set()
+        sampled_points = []  # (s_idx, idx_found)
+        for s_idx, st in enumerate(sample_times):
+            idx_found = find_nearest_index(obstacle.time, st)
+            if idx_found < 0:
+                continue
+            if abs(obstacle.time[idx_found] - st) > 0.5:
+                continue
+            sampled_states.add((round(float(obstacle.x[idx_found]), 6), round(float(obstacle.y[idx_found]), 6), round(float(obstacle.radius[idx_found]), 6), round(float(obstacle.margin[idx_found]), 6)))
+            sampled_points.append((s_idx, idx_found))
+
         if len(sampled_states) <= 1:
             add_circle(ax, obstacle.final_x, obstacle.final_y, float(obstacle.radius[-1] + obstacle.margin[-1]), OBSTACLE_MARGIN_COLOR, 0.24, 1)
             add_circle(ax, obstacle.final_x, obstacle.final_y, float(obstacle.radius[-1]), OBSTACLE_COLOR, 0.58, 2)
         else:
-            for ring_number, point_index in enumerate(ring_indexes):
-                progress = ring_number / max(len(ring_indexes) - 1, 1)
-                x = float(obstacle.x[point_index])
-                y = float(obstacle.y[point_index])
-                radius = float(obstacle.radius[point_index])
-                margin = float(obstacle.margin[point_index])
-                add_circle(ax, x, y, radius + margin, OBSTACLE_MARGIN_COLOR, 0.06 + 0.10 * progress, 1)
-                add_circle(ax, x, y, radius, OBSTACLE_COLOR, 0.08 + 0.16 * progress, 2)
+            for s_idx, idx_found in sampled_points:
+                progress = s_idx / max(len(sample_times) - 1, 1)
+                color = cmap(s_idx)
+                x = float(obstacle.x[idx_found])
+                y = float(obstacle.y[idx_found])
+                radius = float(obstacle.radius[idx_found])
+                margin = float(obstacle.margin[idx_found])
+                add_circle(ax, x, y, radius + margin, color, 0.06 + 0.10 * progress, 1)
+                add_circle(ax, x, y, radius, color, 0.08 + 0.16 * progress, 2)
         ax.scatter(obstacle.final_x, obstacle.final_y, marker="X", s=120, color="#7a0b0b", zorder=6)
+
+    # Add a vertical colorbar on the right which maps color->time (ticks).
+    # Use a ScalarMappable with Normalize over the sampled time range so that
+    # the bar shows the continuous progression; ticks will be the integer
+    # sample times so the user can read which color corresponds to which tick.
+    if len(sample_times) > 0:
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=Normalize(vmin=sample_times[0], vmax=sample_times[-1]))
+        sm.set_array([])
+        cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02)
+        # show only start and end labels on the colorbar (min and max time)
+        cbar.set_label("Simulated Seconds", rotation=270, labelpad=18)
+        start_tick = int(sample_times[0])
+        end_tick = int(sample_times[-1])
+        cbar.set_ticks([start_tick, end_tick])
+        cbar.set_ticklabels([str(start_tick), str(end_tick)])
 
     finish_axes(ax, title, devices, targets, obstacles, legend_handles_margins(devices), output, dpi)
 
