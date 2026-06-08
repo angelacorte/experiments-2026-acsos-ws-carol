@@ -38,7 +38,7 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
                     val outputFile = File(dataPath, "positions_node-$mid.csv")
                     // Overwrite and write header
                     FileWriter(outputFile, false).buffered().use { writer ->
-                        writer.appendLine("time,nodeId,X,Y,safeMargin,commDistance")
+                        writer.appendLine("time,nodeId,X,Y,safeMargin,commDistance,isLeader")
                     }
                 }
             lastExportedTick.clear()
@@ -52,16 +52,16 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
         if (!outputDir.exists() && !outputDir.mkdirs()) error("Cannot create output directory: $dataPath")
     }
 
-    private fun appendPosition(nodeId: Int, time: Time, position: Coordinate, safeMargin: Double, commDistance: Double) {
+    private fun appendPosition(nodeId: Int, time: Time, position: Coordinate, safeMargin: Double, commDistance: Double, isLeader: Boolean) {
         val outputFile = File(dataPath, "positions_node-$nodeId.csv")
         val writeHeader = !outputFile.exists() || outputFile.length() == 0L
         FileWriter(outputFile, true).buffered().use { writer ->
             if (writeHeader) {
-                writer.appendLine("time,nodeId,X,Y,safeMargin,commDistance")
+                writer.appendLine("time,nodeId,X,Y,safeMargin,commDistance,isLeader")
             }
             val tick = time.toDouble().roundToLong()
             writer.appendLine(
-                "${tick},$nodeId,${String.format(Locale.US, "%.4f", position.x)},${String.format(Locale.US, "%.4f", position.y)},${String.format(Locale.US, "%.4f", safeMargin)},${String.format(Locale.US, "%.4f", commDistance)}"
+                "${tick},$nodeId,${String.format(Locale.US, "%.4f", position.x)},${String.format(Locale.US, "%.4f", position.y)},${String.format(Locale.US, "%.4f", safeMargin)},${String.format(Locale.US, "%.4f", commDistance)},${isLeader}"
             )
         }
     }
@@ -82,9 +82,20 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
                 val position = environment.getPosition(node)
                 val safeMargin = node.getConcentration(SimpleMolecule("SafeMargin")) as? Double ?: 0.0
                 val commDistance = node.getConcentration(SimpleMolecule("CommunicationDistance")) as? Double ?: 0.0
+                // isLeader molecule may be absent; if present coerce value to boolean
+                val isLeader: Boolean = if (node.contains(SimpleMolecule("isLeader"))) {
+                    when (val c = node.getConcentration(SimpleMolecule("isLeader"))) {
+                        is Boolean -> c
+                        is String -> c.toBoolean()
+                        is Number -> c.toInt() != 0
+                        else -> false
+                    }
+                } else {
+                    false
+                }
                 val tick = time.toDouble().roundToLong()
                 if (lastExportedTick[mid] != tick) {
-                    appendPosition(mid, time, Coordinate(position.x, position.y), safeMargin, commDistance)
+                    appendPosition(mid, time, Coordinate(position.x, position.y), safeMargin, commDistance, isLeader)
                     lastExportedTick[mid] = tick
                 }
             }
