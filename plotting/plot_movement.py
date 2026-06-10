@@ -504,7 +504,7 @@ def draw_margin_evolution(
     # Use a ScalarMappable with Normalize over the sampled time range so that
     # the bar shows the continuous progression; ticks will be the integer
     # sample times so the user can read which color corresponds to which tick.
-    if len(sample_times) > 0:
+    if len(sample_times) > 0 and "multipleobstacles" not in title.lower():
         sm = plt.cm.ScalarMappable(cmap=cmap, norm=Normalize(vmin=sample_times[0], vmax=sample_times[-1]))
         sm.set_array([])
         cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02)
@@ -680,7 +680,7 @@ def main() -> int:
             obstacles,
             margins_output,
             args.dpi,
-            f"{config.title} margin evolution",
+            f"{config.title}",
             args.margin_samples,
         )
 
