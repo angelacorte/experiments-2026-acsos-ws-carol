@@ -1,0 +1,222 @@
+incarnation: collektive
+
+variables:
+  dataPath: &dataPath "data/multiple-obstacles/"
+  maxCommDistance: &maxCommDistance 8.0
+  connectWithinDistance: &connectWithinDistance 10.0
+  robotSafeMargin: &robotSafeMargin 2.0
+  robotMaxSpeed: &robotMaxSpeed 2.0
+#  moveTargetTime1: &moveTargetTime1 40.0
+#  moveTargetTime2: &moveTargetTime2 90.0
+  timeDistribution: &timeDistribution 100.0 # times in a second > 100 = 10 ms
+  obstacleRadius: &obstacleRadius 3.0
+  obstacleMargin: &obstacleMargin 2.5
+  controlPeriodMS: &controlPeriodMS 100.0 #ms
+  constraintPrefix:
+    formula: |
+      "qp"
+  logEnabled:
+    formula: "false"
+  rhoADMM:
+    language: kotlin
+    formula: 10.0
+  rhoResidual:
+    language: kotlin
+    formula: 0.5
+  rhoSlack:
+    language: kotlin
+    formula: 2.0
+  primalTolerance:
+    language: kotlin
+    formula: 1e-2
+  dualTolerance:
+    language: kotlin
+    formula: 1e-2
+  QPSettings: &QPSettings
+    language: kotlin
+    formula: |
+      import it.unibo.collektive.alchemist.device.SimulationQpSettings
+      import it.unibo.collektive.admm.Tolerance
+      val tolerance = Tolerance(primalTolerance, dualTolerance)
+      SimulationQpSettings("qp", false, rhoADMM, rhoResidual, rhoSlack, tolerance)
+  seed: &seed
+    min: 0
+    max: 2
+    default: 42
+    step: 1
+
+network-model:
+  type: ConnectWithinDistance
+  parameters: [*connectWithinDistance]
+
+_pool: &program
+  - time-distribution: *timeDistribution
+    type: Event
+    actions:
+      - type: RunCollektiveProgram
+        parameters: [ it.unibo.collektive.entrypoints.MultipleObstaclesKt.multipleObstaclesEntrypoint ]
+      - type: SpeedToTarget
+        parameters: []
+
+#layers:
+#  - type: ConstantLayer
+#    parameters: [ *QPSettings ]
+#    molecule: QPSettings
+
+#environment:
+#  type: Continuous2DEnvironment
+#  parameters: [ ]
+#  global-programs:
+#    - time-distribution:
+#        type: Trigger
+#        parameters: [ *moveTargetTime1 ]
+#      type: MoveTarget
+#      parameters:
+#        - 15.0
+#        - 0.0
+#        - 1
+#    - time-distribution:
+#        type: Trigger
+#        parameters: [ *moveTargetTime2 ]
+#      type: MoveTarget
+#      parameters:
+#        - 0.0
+#        - 15.0
+#        - 1
+
+deployments:
+  - type: Point
+    parameters: [ -3, 0 ]
+    contents:
+      - molecule: Robot
+        concentration: true
+      - molecule: MaxSpeed
+        concentration: *robotMaxSpeed
+      - molecule: SafeMargin
+        concentration: *robotSafeMargin
+      - molecule: TargetID
+        concentration: 1
+      - molecule: CommunicationDistance
+        concentration: *maxCommDistance
+      - molecule: TimeDistribution
+        concentration: *timeDistribution
+      - molecule: ControlPeriodMS
+        concentration: *controlPeriodMS
+    programs:
+      - *program
+    properties:
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.LocationSensorProperty
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.TimeSensorProperty
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.SolverProperty
+        parameters: [ *QPSettings ]
+
+  - type: Point
+    parameters: [ 5, 0 ]
+    contents:
+      - molecule: Robot
+        concentration: true
+      - molecule: MaxSpeed
+        concentration: *robotMaxSpeed
+      - molecule: SafeMargin
+        concentration: *robotSafeMargin
+      - molecule: TargetID
+        concentration: 1
+      - molecule: CommunicationDistance
+        concentration: *maxCommDistance
+      - molecule: TimeDistribution
+        concentration: *timeDistribution
+      - molecule: ControlPeriodMS
+        concentration: *controlPeriodMS
+    programs:
+      - *program
+    properties:
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.LocationSensorProperty
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.TimeSensorProperty
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.SolverProperty
+        parameters: [ *QPSettings ]
+#
+  - type: Point
+    parameters: [ 12, 0 ]
+    contents:
+      - molecule: Robot
+        concentration: true
+      - molecule: MaxSpeed
+        concentration: *robotMaxSpeed
+      - molecule: SafeMargin
+        concentration: *robotSafeMargin
+      - molecule: TargetID
+        concentration: 1
+      - molecule: CommunicationDistance
+        concentration:  *maxCommDistance
+      - molecule: TimeDistribution
+        concentration: *timeDistribution
+      - molecule: ControlPeriodMS
+        concentration: *controlPeriodMS
+    programs:
+      - *program
+    properties:
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.LocationSensorProperty
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.TimeSensorProperty
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.SolverProperty
+        parameters: [ *QPSettings ]
+
+  - type: Point
+    parameters: [ 20, 0 ]
+    contents:
+      - molecule: Robot
+        concentration: true
+      - molecule: MaxSpeed
+        concentration: *robotMaxSpeed
+      - molecule: SafeMargin
+        concentration: *robotSafeMargin
+      - molecule: TargetID
+        concentration: 1
+      - molecule: CommunicationDistance
+        concentration:  *maxCommDistance
+      - molecule: TimeDistribution
+        concentration: *timeDistribution
+      - molecule: ControlPeriodMS
+        concentration: *controlPeriodMS
+    programs:
+      - *program
+    properties:
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.LocationSensorProperty
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.TimeSensorProperty
+      - type: it.unibo.collektive.alchemist.device.sensors.impl.SolverProperty
+        parameters: [ *QPSettings ]
+
+  - type: Point
+    parameters: [ 10, 20 ]
+    contents:
+      - molecule: Target
+        concentration: 1
+
+  - type: Point
+    parameters: [ 5, 10 ]
+    contents:
+      - molecule: Obstacle
+        concentration: true
+      - molecule: SafeRadius
+        concentration: *obstacleRadius
+      - molecule: SafeMargin
+        concentration: *obstacleMargin
+
+  - type: Point
+    parameters: [ 15, 10 ]
+    contents:
+      - molecule: Obstacle
+        concentration: true
+      - molecule: SafeRadius
+        concentration: *obstacleRadius
+      - molecule: SafeMargin
+        concentration: *obstacleMargin
+
+terminate:
+  type: AfterTime
+  parameters: [ 200.0 ]
+
+monitors:
+  - type: it.unibo.alchemist.model.monitors.ExportDevicePositions
+    parameters: [*seed, *dataPath]
+  - type: it.unibo.alchemist.model.monitors.ExportObjectsPosition
+    parameters: [ *dataPath ]

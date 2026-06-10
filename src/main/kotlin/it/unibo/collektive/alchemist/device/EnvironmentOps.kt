@@ -67,6 +67,17 @@ fun getObstacle(): Obstacle {
     return Obstacle(obstaclePos[0], obstaclePos[1], radius, margin)
 }
 
+context(device: CollektiveDevice<*>)
+fun getObstacles(): List<Obstacle> {
+    val obstacles = device.environment.nodes.filter { it.contains(SimpleMolecule("Obstacle")) }
+    return obstacles.map { obstacle ->
+        val obstaclePos = device.environment.getPosition(obstacle).coordinates
+        val radius = obstacle.getConcentration(SimpleMolecule("SafeRadius")) as Double
+        val margin = obstacle.getConcentration(SimpleMolecule("SafeMargin")) as Double
+        Obstacle(obstaclePos[0], obstaclePos[1], radius, margin)
+    }
+}
+
 /**
  * Applies the computed control [velocity][control] to the robot by moving its node inside the environment.
  *
