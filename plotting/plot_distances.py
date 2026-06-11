@@ -24,11 +24,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
+from plot_palette import COMM_COLOR, DEVICE_COLORS, ROBOT_COLOR, SAFE_COLOR
 
-DISTANCE_COLOR = "#1f77b4"
-SAFE_MARGIN_COLOR = "#d62728"
-COMMUNICATION_COLOR = "#6f4eb5"
-DEVICE_COLORS = ["#1f77b4", "#007f5f", "#d62728", "#6f4eb5", "#ff7f0e", "#17becf"]
+DISTANCE_COLOR = ROBOT_COLOR
+SAFE_MARGIN_COLOR = SAFE_COLOR
+COMMUNICATION_COLOR = COMM_COLOR
 DISTANCE_SCOPE = "after-communication"
 
 
@@ -88,6 +88,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--title", default=None, help="Plot title. Defaults to YAML stem or data directory name.")
     parser.add_argument("--max-points", type=int, default=2500, help="Maximum plotted time samples after downsampling.")
     parser.add_argument("--dpi", type=int, default=220, help="Output image DPI.")
+    parser.add_argument(
+        "--output-format",
+        choices=("pdf", "png"),
+        default="pdf",
+        help="Output format. Defaults to pdf; choose png to save only PNG files.",
+    )
+    parser.add_argument("--png", action="store_const", const="png", dest="output_format", help="Save only PNG files.")
     return parser.parse_args()
 
 
@@ -447,8 +454,7 @@ def draw_distance_chart(
         spine.set_linewidth(1.4)
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output, dpi=dpi, bbox_inches="tight")
-    fig.savefig(output.with_suffix(".pdf"), bbox_inches="tight")
+    save_figure(fig, output, dpi)
     plt.close(fig)
 
 
@@ -517,18 +523,25 @@ def draw_per_device_distance_chart(
         spine.set_linewidth(1.4)
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output, dpi=dpi, bbox_inches="tight")
-    fig.savefig(output.with_suffix(".pdf"), bbox_inches="tight")
+    save_figure(fig, output, dpi)
     plt.close(fig)
 
 
-def output_paths(output_dir: Path, prefix: str) -> tuple[Path, Path, Path, Path]:
+def save_figure(fig: plt.Figure, output: Path, dpi: int) -> None:
+    kwargs = {"bbox_inches": "tight"}
+    if output.suffix.lower() == ".png":
+        kwargs["dpi"] = dpi
+    fig.savefig(output, **kwargs)
+
+
+def output_paths(output_dir: Path, prefix: str, output_format: str) -> tuple[Path, Path, Path, Path]:
     experiment_output_dir = output_dir / prefix
+    suffix = f".{output_format}"
     return (
-        experiment_output_dir / f"{prefix}_distance_inf.png",
-        experiment_output_dir / f"{prefix}_distance_sup.png",
-        experiment_output_dir / f"{prefix}_distance_inf_by_device.png",
-        experiment_output_dir / f"{prefix}_distance_sup_by_device.png",
+        experiment_output_dir / f"{prefix}_distance_inf{suffix}",
+        experiment_output_dir / f"{prefix}_distance_sup{suffix}",
+        experiment_output_dir / f"{prefix}_distance_inf_by_device{suffix}",
+        experiment_output_dir / f"{prefix}_distance_sup_by_device{suffix}",
     )
 
 
@@ -556,7 +569,11 @@ def main() -> int:
             print(f"Warning: skipping {config.title}: {error}")
             continue
 
-        inf_output, sup_output, inf_by_device_output, sup_by_device_output = output_paths(args.output_dir, prefix)
+        inf_output, sup_output, inf_by_device_output, sup_by_device_output = output_paths(
+            args.output_dir,
+            prefix,
+            args.output_format,
+        )
         draw_distance_chart(
             series.time,
             series.d_inf,
@@ -601,13 +618,9 @@ def main() -> int:
         )
 
         print(f"Wrote {inf_output}")
-        print(f"Wrote {inf_output.with_suffix('.pdf')}")
         print(f"Wrote {sup_output}")
-        print(f"Wrote {sup_output.with_suffix('.pdf')}")
         print(f"Wrote {inf_by_device_output}")
-        print(f"Wrote {inf_by_device_output.with_suffix('.pdf')}")
         print(f"Wrote {sup_by_device_output}")
-        print(f"Wrote {sup_by_device_output.with_suffix('.pdf')}")
 
     return 0
 

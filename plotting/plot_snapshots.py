@@ -25,14 +25,17 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 
-
-ROBOT_COLOR = "#1f77b4"
-TARGET_COLOR = "#2ca02c"
-OBSTACLE_COLOR = "#d62728"
-LINK_COLOR = "#4a4a4a"
-COMM_COLOR = "#b8b8b8"
-SAFE_COLOR = "#7f7f7f"
-OBSTACLE_MARGIN_COLOR = "#f2cf3a"
+from plot_palette import (
+    COMM_COLOR,
+    LEADER_COLOR,
+    LINK_COLOR,
+    OBSTACLE_COLOR,
+    OBSTACLE_MARGIN_COLOR,
+    OBSTACLE_MARKER_COLOR,
+    ROBOT_COLOR,
+    SAFE_COLOR,
+    TARGET_COLOR,
+)
 ALCHEMIST_ROBOT_MARGIN_RADIUS_FACTOR = 0.5
 
 
@@ -119,6 +122,13 @@ def parse_args() -> argparse.Namespace:
         help="Draw the last N samples of each robot trajectory before the snapshot.",
     )
     parser.add_argument("--dpi", type=int, default=220, help="Output image DPI.")
+    parser.add_argument(
+        "--output-format",
+        choices=("pdf", "png"),
+        default="pdf",
+        help="Output format. Defaults to pdf; choose png to save only PNG files.",
+    )
+    parser.add_argument("--png", action="store_const", const="png", dest="output_format", help="Save only PNG files.")
     parser.add_argument("--show", action="store_true", help="Show figures instead of only saving them.")
     return parser.parse_args()
 
@@ -366,7 +376,7 @@ def alchemist_robot_margin_radius(safe_margin: float) -> float:
     return safe_margin * ALCHEMIST_ROBOT_MARGIN_RADIUS_FACTOR
 
 
-def draw_leader_ring(ax: plt.Axes, x: float, y: float, scale: float = 1.0, color: str = "#FFD700") -> None:
+def draw_leader_ring(ax: plt.Axes, x: float, y: float, scale: float = 1.0, color: str = LEADER_COLOR) -> None:
     """Draw a concentric ring around point (x,y) to mark a leader."""
     try:
         x0, x1 = ax.get_xlim()
@@ -378,7 +388,7 @@ def draw_leader_ring(ax: plt.Axes, x: float, y: float, scale: float = 1.0, color
     ax.add_patch(ring)
 
 
-def draw_crown(ax: plt.Axes, x: float, y: float, scale: float = 1.0, color: str = "#FFD700") -> None:
+def draw_crown(ax: plt.Axes, x: float, y: float, scale: float = 1.0, color: str = LEADER_COLOR) -> None:
     """Draw a small crown-shaped polygon near (x,y) in data coordinates.
 
     The crown size is proportional to the current axis data range so it
@@ -412,17 +422,16 @@ def draw_crown(ax: plt.Axes, x: float, y: float, scale: float = 1.0, color: str 
 def draw_snapshot(
     config: ExperimentConfig,
     snapshot: float,
+    robots: list[EntitySample],
+    targets: list[EntitySample],
+    obstacles: list[EntitySample],
+    trails: dict[int, list[tuple[float, float]]],
+    limits: tuple[float, float, float, float],
     output_path: Path,
     dpi: int,
     trail_length: int,
     show: bool,
 ) -> None:
-    robots, targets, obstacles, trails = load_samples(
-        config.data_dir,
-        snapshot,
-        config.robot_safe_margin,
-    )
-
     fig, ax = plt.subplots(figsize=(9, 8), constrained_layout=True)
 
     for robot in robots:
@@ -440,13 +449,13 @@ def draw_snapshot(
     for obstacle in obstacles:
         add_circle(ax, obstacle, obstacle.radius + obstacle.margin, OBSTACLE_MARGIN_COLOR, 0.25)
         add_circle(ax, obstacle, obstacle.radius, OBSTACLE_COLOR, 0.65)
-        ax.scatter(obstacle.x, obstacle.y, marker="X", s=100, color="#7a0b0b", zorder=5)
+        ax.scatter(obstacle.x, obstacle.y, marker="X", s=100, color=OBSTACLE_MARKER_COLOR, zorder=5)
 
     for robot in robots:
         add_circle(ax, robot, alchemist_robot_margin_radius(robot.safe_margin), SAFE_COLOR, 0.18)
         ax.scatter(robot.x, robot.y, s=90, color=ROBOT_COLOR, edgecolors="black", linewidths=0.7, zorder=7)
         if getattr(robot, "is_leader", False):
-            draw_leader_ring(ax, robot.x, robot.y, scale=1.0, color="#FFD700")
+            draw_leader_ring(ax, robot.x, robot.y, scale=1.0)
         ax.text(robot.x, robot.y, str(robot.entity_id), ha="center", va="center", fontsize=8, color="white", zorder=8)
 
     for target in targets:
@@ -460,9 +469,9 @@ def draw_snapshot(
             linewidths=0.6,
             zorder=6,
         )
-        ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color="#1d5d1d")
+        ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color=TARGET_COLOR)
 
-    set_limits(ax, robots, targets, obstacles)
+    set_limits(ax, limits)
     ax.set_title(f"{config.title} | simulation time={int(round(snapshot))}s")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
@@ -471,19 +480,17 @@ def draw_snapshot(
     ax.legend(handles=legend_handles(config), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=3, frameon=True)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
-    fig.savefig(output_path.with_suffix(".pdf"), bbox_inches="tight")
+    save_figure(fig, output_path, dpi)
     if show:
         plt.show()
     plt.close(fig)
 
 
-def set_limits(
-    ax: plt.Axes,
+def sample_limits(
     robots: list[EntitySample],
     targets: list[EntitySample],
     obstacles: list[EntitySample],
-) -> None:
+) -> tuple[float, float, float, float]:
     xs: list[float] = []
     ys: list[float] = []
     for sample in [*robots, *targets, *obstacles]:
@@ -491,11 +498,30 @@ def set_limits(
         padding = max(robot_safe_margin, sample.comm_distance, sample.radius + sample.margin, 0.0)
         xs.extend([sample.x - padding, sample.x + padding])
         ys.extend([sample.y - padding, sample.y + padding])
-    x_min, x_max = min(xs), max(xs)
-    y_min, y_max = min(ys), max(ys)
+    return min(xs), max(xs), min(ys), max(ys)
+
+
+def common_limits(sample_sets: Iterable[tuple[list[EntitySample], list[EntitySample], list[EntitySample]]]) -> tuple[float, float, float, float]:
+    x_mins: list[float] = []
+    x_maxs: list[float] = []
+    y_mins: list[float] = []
+    y_maxs: list[float] = []
+    for robots, targets, obstacles in sample_sets:
+        x_min, x_max, y_min, y_max = sample_limits(robots, targets, obstacles)
+        x_mins.append(x_min)
+        x_maxs.append(x_max)
+        y_mins.append(y_min)
+        y_maxs.append(y_max)
+
+    x_min, x_max = min(x_mins), max(x_maxs)
+    y_min, y_max = min(y_mins), max(y_maxs)
     pad = max((x_max - x_min) * 0.06, (y_max - y_min) * 0.06, 1.0)
-    ax.set_xlim(x_min - pad, x_max + pad)
-    ax.set_ylim(y_min - pad, y_max + pad)
+    return x_min - pad, x_max + pad, y_min - pad, y_max + pad
+
+
+def set_limits(ax: plt.Axes, limits: tuple[float, float, float, float]) -> None:
+    ax.set_xlim(limits[0], limits[1])
+    ax.set_ylim(limits[2], limits[3])
 
 
 def legend_handles(config: ExperimentConfig) -> list[Line2D]:
@@ -516,17 +542,23 @@ def legend_handles(config: ExperimentConfig) -> list[Line2D]:
     return handles
 
 
-def output_name(prefix: str, snapshot: float) -> Path:
+def save_figure(fig: plt.Figure, output: Path, dpi: int) -> None:
+    kwargs = {"bbox_inches": "tight"}
+    if output.suffix.lower() == ".png":
+        kwargs["dpi"] = dpi
+    fig.savefig(output, **kwargs)
+
+
+def output_name(prefix: str, snapshot: float, output_format: str) -> Path:
     # Always use time in output filename; do not expose 'step' labeling
     value = f"{int(round(snapshot))}"
-    return Path(prefix) / f"{prefix}_time-{value}.png"
+    return Path(prefix) / f"{prefix}_time-{value}.{output_format}"
 
 
 def generated_paths(paths: Iterable[Path]) -> str:
     rendered_paths = []
     for path in paths:
         rendered_paths.append(f"  - {path}")
-        # rendered_paths.append(f"  - {path.with_suffix('.pdf')}")
     return "\n".join(rendered_paths)
 
 
@@ -559,12 +591,46 @@ def main() -> int:
             )
 
         prefix = args.output_prefix or config.data_dir.name.rstrip("/") or config.title
+        snapshot_batches = []
 
         for snapshot in args.snapshots:
-            path = args.output_dir / output_name(prefix, snapshot)
+            path = args.output_dir / output_name(prefix, snapshot, args.output_format)
 
             try:
-                draw_snapshot(config, snapshot, path, args.dpi, args.trail, args.show)
+                robots, targets, obstacles, trails = load_samples(
+                    config.data_dir,
+                    snapshot,
+                    config.robot_safe_margin,
+                )
+            except Exception as error:
+                print(
+                    f"Warning: skipping {config.title} at time {int(round(snapshot))} "
+                    f"({config.data_dir}): {error}"
+                )
+                continue
+
+            snapshot_batches.append((snapshot, path, robots, targets, obstacles, trails))
+
+        if not snapshot_batches:
+            continue
+
+        limits = common_limits((robots, targets, obstacles) for _, _, robots, targets, obstacles, _ in snapshot_batches)
+
+        for snapshot, path, robots, targets, obstacles, trails in snapshot_batches:
+            try:
+                draw_snapshot(
+                    config,
+                    snapshot,
+                    robots,
+                    targets,
+                    obstacles,
+                    trails,
+                    limits,
+                    path,
+                    args.dpi,
+                    args.trail,
+                    args.show,
+                )
             except Exception as error:
                 print(
                     f"Warning: skipping {config.title} at time {int(round(snapshot))} "

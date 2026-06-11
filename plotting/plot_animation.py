@@ -25,15 +25,17 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 
-
-ROBOT_COLOR = "#1f77b4"
-TARGET_COLOR = "#2ca02c"
-OBSTACLE_COLOR = "#d62728"
-LINK_COLOR = "#4a4a4a"
-COMM_COLOR = "#b8b8b8"
-SAFE_COLOR = "#7f7f7f"
-OBSTACLE_MARGIN_COLOR = "#f2cf3a"
-LEADER_COLOR = "#FFD700"
+from plot_palette import (
+    COMM_COLOR,
+    LEADER_COLOR,
+    LINK_COLOR,
+    OBSTACLE_COLOR,
+    OBSTACLE_MARGIN_COLOR,
+    OBSTACLE_MARKER_COLOR,
+    ROBOT_COLOR,
+    SAFE_COLOR,
+    TARGET_COLOR,
+)
 ALCHEMIST_ROBOT_MARGIN_RADIUS_FACTOR = 0.5
 
 
@@ -366,7 +368,7 @@ def draw_frame(ax: plt.Axes, config: ExperimentConfig, data: ExperimentData, tim
             continue
         add_circle(ax, obstacle.x, obstacle.y, obstacle.radius + obstacle.margin, OBSTACLE_MARGIN_COLOR, 0.25, 3)
         add_circle(ax, obstacle.x, obstacle.y, obstacle.radius, OBSTACLE_COLOR, 0.65, 4)
-        ax.scatter(obstacle.x, obstacle.y, marker="X", s=95, color="#7a0b0b", zorder=8)
+        ax.scatter(obstacle.x, obstacle.y, marker="X", s=95, color=OBSTACLE_MARKER_COLOR, zorder=8)
 
     for robot in robots:
         add_circle(ax, robot.x, robot.y, robot_margin_radius(robot.safe_margin), SAFE_COLOR, 0.18, 5)
@@ -380,7 +382,7 @@ def draw_frame(ax: plt.Axes, config: ExperimentConfig, data: ExperimentData, tim
         if target is None:
             continue
         ax.scatter(target.x, target.y, marker="*", s=220, color=TARGET_COLOR, edgecolors="black", linewidths=0.6, zorder=7)
-        ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color="#1d5d1d")
+        ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color=TARGET_COLOR)
 
     ax.set_xlim(limits[0], limits[1])
     ax.set_ylim(limits[2], limits[3])

@@ -26,13 +26,15 @@ from matplotlib.colors import to_rgba, Normalize
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 
-
-DEVICE_COLORS = ["#1f77b4", "#007f5f", "#d62728", "#6f4eb5", "#ff7f0e", "#17becf"]
-TARGET_COLOR = "#2ca02c"
-OBSTACLE_COLOR = "#d62728"
-OBSTACLE_MARGIN_COLOR = "#f2cf3a"
-COMM_COLOR = "#b8b8b8"
-SAFE_COLOR = "#666666"
+from plot_palette import (
+    DEVICE_COLORS,
+    LEADER_COLOR,
+    OBSTACLE_COLOR,
+    OBSTACLE_MARGIN_COLOR,
+    OBSTACLE_MARKER_COLOR,
+    SAFE_COLOR,
+    TARGET_COLOR,
+)
 ALCHEMIST_ROBOT_MARGIN_RADIUS_FACTOR = 0.5
 
 
@@ -89,6 +91,13 @@ def parse_args() -> argparse.Namespace:
         help="Number of temporal rings per moving entity in the margin-evolution image.",
     )
     parser.add_argument("--dpi", type=int, default=220, help="Output image DPI.")
+    parser.add_argument(
+        "--output-format",
+        choices=("pdf", "png"),
+        default="pdf",
+        help="Output format. Defaults to pdf; choose png to save only PNG files.",
+    )
+    parser.add_argument("--png", action="store_const", const="png", dest="output_format", help="Save only PNG files.")
     return parser.parse_args()
 
 
@@ -322,7 +331,7 @@ def draw_leader_ring(
         x: float,
         y: float,
         scale: float = 1.0,
-        color: str = "#FFD700",
+        color: str = LEADER_COLOR,
         alpha: float = 0.9,
 ) -> None:
     """Draw a concentric ring around point (x,y) to mark a leader.
@@ -371,14 +380,14 @@ def draw_clean_movement(
                 last_idx = int(leader_idxs[-1])
                 lx = float(device.x[last_idx])
                 ly = float(device.y[last_idx])
-                draw_leader_ring(ax, lx, ly, scale=1.25, color="#FFD700")
+                draw_leader_ring(ax, lx, ly, scale=1.25)
         except Exception:
             pass
 
     for target in targets:
         add_fading_line(ax, target.x, target.y, TARGET_COLOR, linewidth=2.2, min_alpha=0.02, max_alpha=0.48, linestyle="dashed", zorder=1)
         ax.scatter(target.final_x, target.final_y, marker="*", s=260, color=TARGET_COLOR, edgecolors="black", linewidths=0.7, zorder=5)
-        ax.text(target.final_x, target.final_y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color="#1d5d1d")
+        ax.text(target.final_x, target.final_y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color=TARGET_COLOR)
 
     draw_final_obstacles(ax, obstacles)
     finish_axes(ax, title, devices, targets, obstacles, legend_handles_clean(devices), output, dpi)
@@ -462,7 +471,7 @@ def draw_margin_evolution(
                         float(device.x[idx_found]),
                         float(device.y[idx_found]),
                         scale=0.9 if is_latest_sample else 0.7,
-                        color="#FFD700",
+                        color=LEADER_COLOR,
                         alpha=0.9 if is_latest_sample else 0.35,
                     )
             except Exception:
@@ -498,7 +507,7 @@ def draw_margin_evolution(
                 margin = float(obstacle.margin[idx_found])
                 add_circle(ax, x, y, radius + margin, color, 0.06 + 0.10 * progress, 1)
                 add_circle(ax, x, y, radius, color, 0.08 + 0.16 * progress, 2)
-        ax.scatter(obstacle.final_x, obstacle.final_y, marker="X", s=120, color="#7a0b0b", zorder=6)
+        ax.scatter(obstacle.final_x, obstacle.final_y, marker="X", s=120, color=OBSTACLE_MARKER_COLOR, zorder=6)
 
     # Add a vertical colorbar on the right which maps color->time (ticks).
     # Use a ScalarMappable with Normalize over the sampled time range so that
@@ -554,7 +563,7 @@ def draw_final_obstacles(ax: plt.Axes, obstacles: list[Trajectory]) -> None:
             2,
         )
         add_circle(ax, obstacle.final_x, obstacle.final_y, float(obstacle.radius[-1]), OBSTACLE_COLOR, 0.65, 3)
-        ax.scatter(obstacle.final_x, obstacle.final_y, marker="X", s=120, color="#7a0b0b", zorder=6)
+        ax.scatter(obstacle.final_x, obstacle.final_y, marker="X", s=120, color=OBSTACLE_MARKER_COLOR, zorder=6)
 
 
 def finish_axes(
@@ -581,8 +590,7 @@ def finish_axes(
         spine.set_linewidth(1.8)
     output.parent.mkdir(parents=True, exist_ok=True)
     fig = ax.figure
-    fig.savefig(output, dpi=dpi, bbox_inches="tight")
-    fig.savefig(output.with_suffix(".pdf"), bbox_inches="tight")
+    save_figure(fig, output, dpi)
     plt.close(fig)
 
 
@@ -630,7 +638,7 @@ def legend_handles_clean(devices: list[Trajectory]) -> list[Line2D]:
     # If any device has leader samples, add a legend handle for the leader ring
     try:
         if any(np.any(d.is_leader) for d in devices):
-            handles.append(Line2D([0], [0], marker="o", color="none", markeredgecolor="#FFD700", markerfacecolor="none", markersize=12, linestyle="None", label="Leader"))
+            handles.append(Line2D([0], [0], marker="o", color="none", markeredgecolor=LEADER_COLOR, markerfacecolor="none", markersize=12, linestyle="None", label="Leader"))
     except Exception:
         pass
     return handles
@@ -643,9 +651,17 @@ def legend_handles_margins(devices: list[Trajectory]) -> list[Line2D]:
     return handles
 
 
-def output_paths(output_dir: Path, prefix: str) -> tuple[Path, Path]:
+def save_figure(fig: plt.Figure, output: Path, dpi: int) -> None:
+    kwargs = {"bbox_inches": "tight"}
+    if output.suffix.lower() == ".png":
+        kwargs["dpi"] = dpi
+    fig.savefig(output, **kwargs)
+
+
+def output_paths(output_dir: Path, prefix: str, output_format: str) -> tuple[Path, Path]:
     experiment_output_dir = output_dir / prefix
-    return experiment_output_dir / f"{prefix}_movement.png", experiment_output_dir / f"{prefix}_movement_margins.png"
+    suffix = f".{output_format}"
+    return experiment_output_dir / f"{prefix}_movement{suffix}", experiment_output_dir / f"{prefix}_movement_margins{suffix}"
 
 
 def main() -> int:
@@ -663,7 +679,7 @@ def main() -> int:
             print(f"Warning: skipping {config.title} ({config.data_dir}): {error}")
             continue
 
-        clean_output, margins_output = output_paths(args.output_dir, prefix)
+        clean_output, margins_output = output_paths(args.output_dir, prefix, args.output_format)
 
         draw_clean_movement(
             devices,
@@ -686,9 +702,7 @@ def main() -> int:
 
         print(f"Loaded {len(devices)} devices, {len(targets)} targets, {len(obstacles)} obstacles for {config.title}.")
         print(f"Wrote {clean_output}")
-        print(f"Wrote {clean_output.with_suffix('.pdf')}")
         print(f"Wrote {margins_output}")
-        print(f"Wrote {margins_output.with_suffix('.pdf')}")
 
     return 0
 

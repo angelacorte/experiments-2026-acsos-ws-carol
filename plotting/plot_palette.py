@@ -1,0 +1,12 @@
+"""Shared colors for experiment plots."""
+
+ROBOT_COLOR = "#1f77b4"
+DEVICE_COLORS = [ROBOT_COLOR, "#007f5f", "#d62728", "#6f4eb5", "#ff7f0e", "#17becf"]
+TARGET_COLOR = "#2ca02c"
+OBSTACLE_COLOR = "#646E68"
+OBSTACLE_MARKER_COLOR = "#7a0b0b"
+LINK_COLOR = "#4a4a4a"
+COMM_COLOR = "#A5CBC3"
+SAFE_COLOR = "#7f7f7f"
+OBSTACLE_MARGIN_COLOR = "#990000"
+LEADER_COLOR = "#FFD700"
