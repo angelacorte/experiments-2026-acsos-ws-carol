@@ -37,7 +37,12 @@ from plot_palette import (
     SAFE_COLOR,
     TARGET_COLOR,
 )
+from plot_style import NODE_LABEL_FONT_SIZE, SPATIAL_FIGSIZE, TARGET_LABEL_FONT_SIZE, apply_plot_style
+
+apply_plot_style(plt)
 ALCHEMIST_ROBOT_MARGIN_RADIUS_FACTOR = 0.5
+VIEW_PADDING_FACTOR = 0.03
+MIN_VIEW_PADDING = 0.5
 
 
 @dataclass(frozen=True)
@@ -433,7 +438,7 @@ def draw_snapshot(
     trail_length: int,
     show: bool,
 ) -> None:
-    fig, ax = plt.subplots(figsize=(9, 8), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=SPATIAL_FIGSIZE, constrained_layout=True)
 
     for robot in robots:
         add_circle(ax, robot, robot.comm_distance, COMM_COLOR, 0.2)
@@ -457,7 +462,7 @@ def draw_snapshot(
         ax.scatter(robot.x, robot.y, s=90, color=ROBOT_COLOR, edgecolors="black", linewidths=0.7, zorder=7)
         if getattr(robot, "is_leader", False):
             draw_leader_ring(ax, robot.x, robot.y, scale=1.0)
-        ax.text(robot.x, robot.y, str(robot.entity_id), ha="center", va="center", fontsize=8, color="white", zorder=8)
+        ax.text(robot.x, robot.y, str(robot.entity_id), ha="center", va="center", fontsize=NODE_LABEL_FONT_SIZE, color="white", zorder=8)
 
     for target in targets:
         ax.scatter(
@@ -470,7 +475,7 @@ def draw_snapshot(
             linewidths=0.6,
             zorder=6,
         )
-        ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color=TARGET_COLOR)
+        ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=TARGET_LABEL_FONT_SIZE, color=TARGET_COLOR)
 
     set_limits(ax, limits)
     ax.set_title(f"{beautify_experiment_title(config.title)} | simulation time={int(round(snapshot))}s")
@@ -496,7 +501,7 @@ def sample_limits(
     ys: list[float] = []
     for sample in [*robots, *targets, *obstacles]:
         robot_safe_margin = alchemist_robot_margin_radius(sample.safe_margin)
-        padding = max(robot_safe_margin, sample.comm_distance, sample.radius + sample.margin, 0.0)
+        padding = max(robot_safe_margin, sample.radius + sample.margin, 0.0)
         xs.extend([sample.x - padding, sample.x + padding])
         ys.extend([sample.y - padding, sample.y + padding])
     return min(xs), max(xs), min(ys), max(ys)
@@ -516,7 +521,7 @@ def common_limits(sample_sets: Iterable[tuple[list[EntitySample], list[EntitySam
 
     x_min, x_max = min(x_mins), max(x_maxs)
     y_min, y_max = min(y_mins), max(y_maxs)
-    pad = max((x_max - x_min) * 0.06, (y_max - y_min) * 0.06, 1.0)
+    pad = max((x_max - x_min) * VIEW_PADDING_FACTOR, (y_max - y_min) * VIEW_PADDING_FACTOR, MIN_VIEW_PADDING)
     return x_min - pad, x_max + pad, y_min - pad, y_max + pad
 
 

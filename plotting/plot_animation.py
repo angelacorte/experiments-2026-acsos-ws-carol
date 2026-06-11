@@ -37,7 +37,18 @@ from plot_palette import (
     SAFE_COLOR,
     TARGET_COLOR,
 )
+from plot_style import (
+    NODE_LABEL_FONT_SIZE,
+    SPATIAL_FIGSIZE,
+    TARGET_LABEL_FONT_SIZE,
+    TITLE_FONT_SIZE,
+    apply_plot_style,
+)
+
+apply_plot_style(plt)
 ALCHEMIST_ROBOT_MARGIN_RADIUS_FACTOR = 0.5
+VIEW_PADDING_FACTOR = 0.03
+MIN_VIEW_PADDING = 0.5
 
 
 @dataclass(frozen=True)
@@ -339,7 +350,7 @@ def compute_limits(config: ExperimentConfig, data: ExperimentData) -> tuple[floa
 
     x_min, x_max = min(xs), max(xs)
     y_min, y_max = min(ys), max(ys)
-    pad = max((x_max - x_min) * 0.06, (y_max - y_min) * 0.06, 1.0)
+    pad = max((x_max - x_min) * VIEW_PADDING_FACTOR, (y_max - y_min) * VIEW_PADDING_FACTOR, MIN_VIEW_PADDING)
     return x_min - pad, x_max + pad, y_min - pad, y_max + pad
 
 
@@ -381,7 +392,7 @@ def draw_frame(
     for robot in robots:
         add_circle(ax, robot.x, robot.y, robot_margin_radius(robot.safe_margin), SAFE_COLOR, 0.18, 5)
         ax.scatter(robot.x, robot.y, s=90, color=ROBOT_COLOR, edgecolors="black", linewidths=0.7, zorder=9)
-        ax.text(robot.x, robot.y, str(robot.entity_id), ha="center", va="center", fontsize=8, color="white", zorder=10)
+        ax.text(robot.x, robot.y, str(robot.entity_id), ha="center", va="center", fontsize=NODE_LABEL_FONT_SIZE, color="white", zorder=10)
         if robot.is_leader:
             ax.scatter(robot.x, robot.y, s=160, facecolors="none", edgecolors=LEADER_COLOR, linewidths=2.0, zorder=11)
 
@@ -390,7 +401,7 @@ def draw_frame(
         if target is None:
             continue
         ax.scatter(target.x, target.y, marker="*", s=220, color=TARGET_COLOR, edgecolors="black", linewidths=0.6, zorder=7)
-        ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color=TARGET_COLOR)
+        ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=TARGET_LABEL_FONT_SIZE, color=TARGET_COLOR)
 
     ax.set_xlim(limits[0], limits[1])
     ax.set_ylim(limits[2], limits[3])
@@ -398,8 +409,8 @@ def draw_frame(
     ax.grid(True, color="#e4e4e4", linewidth=0.8)
     ax.set_xlabel("x")
     ax.set_ylabel("y")
-    ax.set_title(f"{beautify_experiment_title(config.title)} | simulation time={int(round(time))}s", fontsize=16, pad=10)
-    ax.legend(handles=legend_handles(config, data, has_leader), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=4, frameon=True, fontsize=9)
+    ax.set_title(f"{beautify_experiment_title(config.title)} | simulation time={int(round(time))}s", fontsize=TITLE_FONT_SIZE, pad=10)
+    ax.legend(handles=legend_handles(config, data, has_leader), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=4, frameon=True)
 
 
 def legend_handles(config: ExperimentConfig, data: ExperimentData, has_leader: bool) -> list[Line2D]:
@@ -432,7 +443,7 @@ def output_path(output_dir: Path, prefix: str) -> Path:
 def make_gif(config: ExperimentConfig, data: ExperimentData, output: Path, fps: int, dpi: int) -> None:
     limits = compute_limits(config, data)
     has_leader = any(state.is_leader for series in data.robots.values() for state in series.values())
-    fig, ax = plt.subplots(figsize=(9, 8), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=SPATIAL_FIGSIZE, constrained_layout=True)
 
     def update(time: float):
         draw_frame(ax, config, data, time, limits, has_leader)

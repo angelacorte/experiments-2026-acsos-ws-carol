@@ -36,7 +36,19 @@ from plot_palette import (
     SAFE_COLOR,
     TARGET_COLOR,
 )
+from plot_style import (
+    COLORBAR_LABEL_FONT_SIZE,
+    LEGEND_FONT_SIZE,
+    NODE_LABEL_FONT_SIZE,
+    TARGET_LABEL_FONT_SIZE,
+    TITLE_FONT_SIZE,
+    apply_plot_style,
+)
+
+apply_plot_style(plt)
 ALCHEMIST_ROBOT_MARGIN_RADIUS_FACTOR = 0.5
+VIEW_PADDING_FACTOR = 0.03
+MIN_VIEW_PADDING = 0.5
 
 
 @dataclass(frozen=True)
@@ -371,7 +383,7 @@ def draw_clean_movement(
         add_fading_line(ax, device.x, device.y, color, linewidth=2.0, min_alpha=0.015, max_alpha=0.82)
         add_circle(ax, device.final_x, device.final_y, robot_margin_radius(float(device.safe_margin[-1])), SAFE_COLOR, 0.22, 4)
         ax.scatter(device.final_x, device.final_y, s=95, color=color, edgecolors="black", linewidths=0.8, zorder=6)
-        ax.text(device.final_x, device.final_y, str(device.entity_id), ha="center", va="center", fontsize=8, color="white", zorder=7)
+        ax.text(device.final_x, device.final_y, str(device.entity_id), ha="center", va="center", fontsize=NODE_LABEL_FONT_SIZE, color="white", zorder=7)
         # mark leader: find the most recent sample where is_leader==True and
         # draw a conspicuous concentric ring at that position. This highlights
         # the actual location/time where the node acted as leader.
@@ -388,7 +400,7 @@ def draw_clean_movement(
     for target in targets:
         add_fading_line(ax, target.x, target.y, TARGET_COLOR, linewidth=2.2, min_alpha=0.02, max_alpha=0.48, linestyle="dashed", zorder=1)
         ax.scatter(target.final_x, target.final_y, marker="*", s=260, color=TARGET_COLOR, edgecolors="black", linewidths=0.7, zorder=5)
-        ax.text(target.final_x, target.final_y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color=TARGET_COLOR)
+        ax.text(target.final_x, target.final_y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=TARGET_LABEL_FONT_SIZE, color=TARGET_COLOR)
 
     draw_final_obstacles(ax, obstacles)
     finish_axes(ax, title, devices, targets, obstacles, legend_handles_clean(devices), output, dpi)
@@ -478,7 +490,7 @@ def draw_margin_evolution(
             except Exception:
                 pass
         ax.scatter(device.final_x, device.final_y, s=90, color=base_color, edgecolors="black", linewidths=0.8, zorder=6)
-        ax.text(device.final_x, device.final_y, str(device.entity_id), ha="center", va="center", fontsize=8, color="white", zorder=7)
+        ax.text(device.final_x, device.final_y, str(device.entity_id), ha="center", va="center", fontsize=NODE_LABEL_FONT_SIZE, color="white", zorder=7)
 
     # Draw obstacles sampled at the same global times. If there is little
     # variation across sampled states, draw just the final circles as before.
@@ -519,7 +531,7 @@ def draw_margin_evolution(
         sm.set_array([])
         cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02)
         # show only start and end labels on the colorbar (min and max time)
-        cbar.set_label("Simulation time", rotation=270, labelpad=18)
+        cbar.set_label("Simulation time", rotation=270, labelpad=18, fontsize=COLORBAR_LABEL_FONT_SIZE)
         start_tick = int(sample_times[0])
         end_tick = int(sample_times[-1])
         cbar.set_ticks([start_tick, end_tick])
@@ -578,14 +590,14 @@ def finish_axes(
     dpi: int,
 ) -> None:
     set_limits(ax, devices, targets, obstacles)
-    ax.set_title(title, fontsize=18, pad=12)
+    ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=12)
     ax.set_xlabel("")
     ax.set_ylabel("")
     ax.set_xticks([])
     ax.set_yticks([])
     ax.grid(False)
     ax.set_aspect("equal", adjustable="box")
-    ax.legend(handles=legend_handles, loc="upper center", bbox_to_anchor=(0.5, -0.04), ncol=3, frameon=True, fontsize=15)
+    ax.legend(handles=legend_handles, loc="upper center", bbox_to_anchor=(0.5, -0.04), ncol=3, frameon=True, fontsize=LEGEND_FONT_SIZE)
     for spine in ax.spines.values():
         spine.set_edgecolor("black")
         spine.set_linewidth(1.8)
@@ -622,7 +634,7 @@ def set_limits(
     ys = np.concatenate(y_values)
     x_min, x_max = float(np.nanmin(xs)), float(np.nanmax(xs))
     y_min, y_max = float(np.nanmin(ys)), float(np.nanmax(ys))
-    pad = max((x_max - x_min) * 0.05, (y_max - y_min) * 0.05, 0.75)
+    pad = max((x_max - x_min) * VIEW_PADDING_FACTOR, (y_max - y_min) * VIEW_PADDING_FACTOR, MIN_VIEW_PADDING)
     ax.set_xlim(x_min - pad, x_max + pad)
     ax.set_ylim(y_min - pad, y_max + pad)
 

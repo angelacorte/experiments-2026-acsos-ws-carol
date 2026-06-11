@@ -26,6 +26,9 @@ from matplotlib.lines import Line2D
 
 from plot_labels import beautify_experiment_title
 from plot_palette import COMM_COLOR, DEVICE_COLORS, ROBOT_COLOR, SAFE_COLOR
+from plot_style import LEGEND_FONT_SIZE, TITLE_FONT_SIZE, apply_plot_style
+
+apply_plot_style(plt)
 
 DISTANCE_COLOR = ROBOT_COLOR
 SAFE_MARGIN_COLOR = SAFE_COLOR
@@ -443,11 +446,11 @@ def draw_distance_chart(
                 label=threshold_name,
             )
 
-    ax.set_title(title, fontsize=18, pad=12)
+    ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=12)
     ax.set_xlabel("Simulation time")
     ax.set_ylabel("Distance")
     ax.grid(True, color="#e4e4e4", linewidth=0.8)
-    ax.legend(loc="best", frameon=True, fontsize=12)
+    ax.legend(loc="best", frameon=True, fontsize=LEGEND_FONT_SIZE)
     ax.set_xlim(float(np.nanmin(time)), float(np.nanmax(time)))
     ax.set_ylim(bottom=0)
     for spine in ax.spines.values():
@@ -512,11 +515,11 @@ def draw_per_device_distance_chart(
                 label=threshold_name,
             )
 
-    ax.set_title(title, fontsize=18, pad=12)
+    ax.set_title(title, fontsize=TITLE_FONT_SIZE, pad=12)
     ax.set_xlabel("Simulation time")
     ax.set_ylabel("Distance")
     ax.grid(True, color="#e4e4e4", linewidth=0.8)
-    ax.legend(loc="best", frameon=True, fontsize=12)
+    ax.legend(loc="best", frameon=True, fontsize=LEGEND_FONT_SIZE)
     ax.set_xlim(float(np.nanmin(time)), float(np.nanmax(time)))
     ax.set_ylim(bottom=0)
     for spine in ax.spines.values():
@@ -582,7 +585,7 @@ def main() -> int:
             series.safe_margin,
             inf_output,
             args.dpi,
-            f"{pretty_title} minimum {scope_title(DISTANCE_SCOPE)} distance",
+            f"{pretty_title} minimum distance {scope_title(DISTANCE_SCOPE)}",
             rf"$d_{{inf}}(t) = \min_{{{formula_scope(DISTANCE_SCOPE)}}}\|p_i - p_j\|$",
             "Robot safety radius",
             SAFE_MARGIN_COLOR,
