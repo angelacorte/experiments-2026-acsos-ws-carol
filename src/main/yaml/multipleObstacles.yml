@@ -213,7 +213,7 @@ deployments:
 
 terminate:
   type: AfterTime
-  parameters: [ 200.0 ]
+  parameters: [ 50.0 ]
 
 monitors:
   - type: it.unibo.alchemist.model.monitors.ExportDevicePositions
