@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.lines import Line2D
 
+from plot_labels import beautify_experiment_title
 from plot_palette import COMM_COLOR, DEVICE_COLORS, ROBOT_COLOR, SAFE_COLOR
 
 DISTANCE_COLOR = ROBOT_COLOR
@@ -443,8 +444,8 @@ def draw_distance_chart(
             )
 
     ax.set_title(title, fontsize=18, pad=12)
-    ax.set_xlabel("simulation time")
-    ax.set_ylabel("distance")
+    ax.set_xlabel("Simulation time")
+    ax.set_ylabel("Distance")
     ax.grid(True, color="#e4e4e4", linewidth=0.8)
     ax.legend(loc="best", frameon=True, fontsize=12)
     ax.set_xlim(float(np.nanmin(time)), float(np.nanmax(time)))
@@ -488,7 +489,7 @@ def draw_per_device_distance_chart(
             distances_by_device[device_id],
             color=DEVICE_COLORS[index % len(DEVICE_COLORS)],
             linewidth=2.0,
-            label=f"robot {device_id}",
+            label=f"Robot {device_id}",
         )
 
     positive_threshold = threshold[threshold > 0]
@@ -512,8 +513,8 @@ def draw_per_device_distance_chart(
             )
 
     ax.set_title(title, fontsize=18, pad=12)
-    ax.set_xlabel("simulation time")
-    ax.set_ylabel("distance")
+    ax.set_xlabel("Simulation time")
+    ax.set_ylabel("Distance")
     ax.grid(True, color="#e4e4e4", linewidth=0.8)
     ax.legend(loc="best", frameon=True, fontsize=12)
     ax.set_xlim(float(np.nanmin(time)), float(np.nanmax(time)))
@@ -569,6 +570,7 @@ def main() -> int:
             print(f"Warning: skipping {config.title}: {error}")
             continue
 
+        pretty_title = beautify_experiment_title(config.title)
         inf_output, sup_output, inf_by_device_output, sup_by_device_output = output_paths(
             args.output_dir,
             prefix,
@@ -580,9 +582,9 @@ def main() -> int:
             series.safe_margin,
             inf_output,
             args.dpi,
-            f"{config.title} minimum {scope_title(DISTANCE_SCOPE)} distance",
+            f"{pretty_title} minimum {scope_title(DISTANCE_SCOPE)} distance",
             rf"$d_{{inf}}(t) = \min_{{{formula_scope(DISTANCE_SCOPE)}}}\|p_i - p_j\|$",
-            "safe margin",
+            "Robot safety radius",
             SAFE_MARGIN_COLOR,
         )
         draw_distance_chart(
@@ -591,9 +593,9 @@ def main() -> int:
             series.comm_distance,
             sup_output,
             args.dpi,
-            f"{config.title} maximum {scope_title(DISTANCE_SCOPE)} distance",
+            f"{pretty_title} maximum {scope_title(DISTANCE_SCOPE)} distance",
             rf"$d_{{sup}}(t) = \max_{{{formula_scope(DISTANCE_SCOPE)}}}\|p_i - p_j\|$",
-            "max communication radius",
+            "Communication radius",
             COMMUNICATION_COLOR,
         )
         draw_per_device_distance_chart(
@@ -602,8 +604,8 @@ def main() -> int:
             per_device_series.safe_margin,
             inf_by_device_output,
             args.dpi,
-            f"{config.title} minimum {scope_title(DISTANCE_SCOPE)} distance by robot",
-            "safe margin",
+            f"{pretty_title} minimum {scope_title(DISTANCE_SCOPE)} distance by robot",
+            "Robot safety radius",
             SAFE_MARGIN_COLOR,
         )
         draw_per_device_distance_chart(
@@ -612,8 +614,8 @@ def main() -> int:
             per_device_series.comm_distance,
             sup_by_device_output,
             args.dpi,
-            f"{config.title} maximum {scope_title(DISTANCE_SCOPE)} distance by robot",
-            "max communication radius",
+            f"{pretty_title} maximum {scope_title(DISTANCE_SCOPE)} distance by robot",
+            "Communication radius",
             COMMUNICATION_COLOR,
         )
 

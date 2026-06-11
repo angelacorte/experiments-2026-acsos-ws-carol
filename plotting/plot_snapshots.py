@@ -25,6 +25,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 
+from plot_labels import beautify_experiment_title
 from plot_palette import (
     COMM_COLOR,
     LEADER_COLOR,
@@ -472,12 +473,12 @@ def draw_snapshot(
         ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=9, color=TARGET_COLOR)
 
     set_limits(ax, limits)
-    ax.set_title(f"{config.title} | simulation time={int(round(snapshot))}s")
+    ax.set_title(f"{beautify_experiment_title(config.title)} | simulation time={int(round(snapshot))}s")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_aspect("equal", adjustable="box")
     ax.grid(True, color="#e4e4e4", linewidth=0.8)
-    ax.legend(handles=legend_handles(config), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=3, frameon=True)
+    ax.legend(handles=legend_handles(config, robots, targets, obstacles), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=4, frameon=True)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     save_figure(fig, output_path, dpi)
@@ -524,21 +525,31 @@ def set_limits(ax: plt.Axes, limits: tuple[float, float, float, float]) -> None:
     ax.set_ylim(limits[2], limits[3])
 
 
-def legend_handles(config: ExperimentConfig) -> list[Line2D]:
+def legend_handles(
+    config: ExperimentConfig,
+    robots: list[EntitySample],
+    targets: list[EntitySample],
+    obstacles: list[EntitySample],
+) -> list[Line2D]:
     handles = [
-        Line2D([0], [0], marker="o", color="none", markerfacecolor=ROBOT_COLOR, markeredgecolor="black", markersize=9, label="Robot"),
-        Line2D([0], [0], marker="o", color=SAFE_COLOR, alpha=0.35, markersize=9, label="Safe margin"),
-        Line2D([0], [0], marker="*", color="none", markerfacecolor=TARGET_COLOR, markeredgecolor="black", markersize=12, label="Target"),
-        Line2D([0], [0], color=LINK_COLOR, linewidth=2, alpha=0.65, label="Communication link"),
+        Line2D([0], [0], marker="o", color="none", markerfacecolor=ROBOT_COLOR, markeredgecolor="black", markersize=9, label="Robots"),
+        Line2D([0], [0], marker="o", color=SAFE_COLOR, alpha=0.35, markersize=9, label="Robot safety radius"),
+        Line2D([0], [0], marker="o", color=COMM_COLOR, alpha=0.35, markersize=9, label="Communication radius"),
+        Line2D([0], [0], color=LINK_COLOR, linewidth=2, alpha=0.65, label="Communication links"),
     ]
     if config.connect_within_distance is not None:
-        handles[-1].set_label(f"Linking distance")
-    handles.extend(
-        [
-            Line2D([0], [0], marker="o", color=COMM_COLOR, alpha=0.35, markersize=9, label="Max communication distance"),
-            Line2D([0], [0], marker="X", color="none", markerfacecolor=OBSTACLE_COLOR, markersize=9, label="Obstacle"),
-        ]
-    )
+        handles[3].set_label("Links within communication distance")
+    if targets:
+        handles.append(Line2D([0], [0], marker="*", color="none", markerfacecolor=TARGET_COLOR, markeredgecolor="black", markersize=12, label="Targets"))
+    if obstacles:
+        handles.extend(
+            [
+                Line2D([0], [0], marker="X", color="none", markerfacecolor=OBSTACLE_MARKER_COLOR, markeredgecolor=OBSTACLE_MARKER_COLOR, markersize=9, label="Obstacles"),
+                Line2D([0], [0], color=OBSTACLE_MARGIN_COLOR, linewidth=6, alpha=0.35, label="Obstacle safety margin"),
+            ]
+        )
+    if any(robot.is_leader for robot in robots):
+        handles.append(Line2D([0], [0], marker="o", color="none", markeredgecolor=LEADER_COLOR, markerfacecolor="none", markersize=12, linestyle="None", label="Leader"))
     return handles
 
 

@@ -25,6 +25,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 
+from plot_labels import beautify_experiment_title
 from plot_palette import (
     COMM_COLOR,
     LEADER_COLOR,
@@ -342,7 +343,14 @@ def compute_limits(config: ExperimentConfig, data: ExperimentData) -> tuple[floa
     return x_min - pad, x_max + pad, y_min - pad, y_max + pad
 
 
-def draw_frame(ax: plt.Axes, config: ExperimentConfig, data: ExperimentData, time: float, limits: tuple[float, float, float, float]) -> None:
+def draw_frame(
+    ax: plt.Axes,
+    config: ExperimentConfig,
+    data: ExperimentData,
+    time: float,
+    limits: tuple[float, float, float, float],
+    has_leader: bool,
+) -> None:
     ax.clear()
     robots = [
         state_at_or_before(series, time)
@@ -390,21 +398,30 @@ def draw_frame(ax: plt.Axes, config: ExperimentConfig, data: ExperimentData, tim
     ax.grid(True, color="#e4e4e4", linewidth=0.8)
     ax.set_xlabel("x")
     ax.set_ylabel("y")
-    ax.set_title(f"{config.title} | simulation time={int(round(time))}s", fontsize=16, pad=10)
-    ax.legend(handles=legend_handles(config), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=3, frameon=True, fontsize=9)
+    ax.set_title(f"{beautify_experiment_title(config.title)} | simulation time={int(round(time))}s", fontsize=16, pad=10)
+    ax.legend(handles=legend_handles(config, data, has_leader), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=4, frameon=True, fontsize=9)
 
 
-def legend_handles(config: ExperimentConfig) -> list[Line2D]:
+def legend_handles(config: ExperimentConfig, data: ExperimentData, has_leader: bool) -> list[Line2D]:
     handles = [
-        Line2D([0], [0], marker="o", color="none", markerfacecolor=ROBOT_COLOR, markeredgecolor="black", markersize=8, label="Robot"),
-        Line2D([0], [0], marker="o", color=SAFE_COLOR, alpha=0.35, markersize=8, label="Safe margin"),
-        Line2D([0], [0], marker="*", color="none", markerfacecolor=TARGET_COLOR, markeredgecolor="black", markersize=11, label="Target"),
-        Line2D([0], [0], color=LINK_COLOR, linewidth=2, alpha=0.65, label="Communication link"),
-        Line2D([0], [0], marker="o", color=COMM_COLOR, alpha=0.35, markersize=8, label="Max communication distance"),
-        Line2D([0], [0], marker="X", color="none", markerfacecolor=OBSTACLE_COLOR, markersize=8, label="Obstacle"),
+        Line2D([0], [0], marker="o", color="none", markerfacecolor=ROBOT_COLOR, markeredgecolor="black", markersize=8, label="Robots"),
+        Line2D([0], [0], marker="o", color=SAFE_COLOR, alpha=0.35, markersize=8, label="Robot safety radius"),
+        Line2D([0], [0], marker="o", color=COMM_COLOR, alpha=0.35, markersize=8, label="Communication radius"),
+        Line2D([0], [0], color=LINK_COLOR, linewidth=2, alpha=0.65, label="Communication links"),
     ]
     if config.connect_within_distance is not None:
-        handles[3].set_label("Linking distance")
+        handles[3].set_label("Links within communication distance")
+    if data.targets:
+        handles.append(Line2D([0], [0], marker="*", color="none", markerfacecolor=TARGET_COLOR, markeredgecolor="black", markersize=11, label="Targets"))
+    if data.obstacles:
+        handles.extend(
+            [
+                Line2D([0], [0], marker="X", color="none", markerfacecolor=OBSTACLE_MARKER_COLOR, markeredgecolor=OBSTACLE_MARKER_COLOR, markersize=8, label="Obstacles"),
+                Line2D([0], [0], color=OBSTACLE_MARGIN_COLOR, linewidth=6, alpha=0.35, label="Obstacle safety margin"),
+            ]
+        )
+    if has_leader:
+        handles.append(Line2D([0], [0], marker="o", color="none", markeredgecolor=LEADER_COLOR, markerfacecolor="none", markersize=11, linestyle="None", label="Leader"))
     return handles
 
 
@@ -414,10 +431,11 @@ def output_path(output_dir: Path, prefix: str) -> Path:
 
 def make_gif(config: ExperimentConfig, data: ExperimentData, output: Path, fps: int, dpi: int) -> None:
     limits = compute_limits(config, data)
+    has_leader = any(state.is_leader for series in data.robots.values() for state in series.values())
     fig, ax = plt.subplots(figsize=(9, 8), constrained_layout=True)
 
     def update(time: float):
-        draw_frame(ax, config, data, time, limits)
+        draw_frame(ax, config, data, time, limits, has_leader)
         return []
 
     animation = FuncAnimation(fig, update, frames=data.frame_times, interval=1000 / max(fps, 1), blit=False)

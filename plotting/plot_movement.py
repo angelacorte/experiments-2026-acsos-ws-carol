@@ -26,6 +26,7 @@ from matplotlib.colors import to_rgba, Normalize
 from matplotlib.lines import Line2D
 from matplotlib.patches import Circle
 
+from plot_labels import beautify_experiment_title
 from plot_palette import (
     DEVICE_COLORS,
     LEADER_COLOR,
@@ -518,7 +519,7 @@ def draw_margin_evolution(
         sm.set_array([])
         cbar = fig.colorbar(sm, ax=ax, orientation="vertical", pad=0.02)
         # show only start and end labels on the colorbar (min and max time)
-        cbar.set_label("Simulated Seconds", rotation=270, labelpad=18)
+        cbar.set_label("Simulation time", rotation=270, labelpad=18)
         start_tick = int(sample_times[0])
         end_tick = int(sample_times[-1])
         cbar.set_ticks([start_tick, end_tick])
@@ -628,13 +629,24 @@ def set_limits(
 
 def legend_handles_clean(devices: list[Trajectory]) -> list[Line2D]:
     handles = [
-        Line2D([0], [0], color=DEVICE_COLORS[0], lw=3, marker="o", markersize=9, label="Devices"),
-        Line2D([0], [0], color=SAFE_COLOR, lw=2, marker="o", alpha=0.35, markersize=9, label="Final safety radius"),
-        Line2D([0], [0], color=TARGET_COLOR, lw=2, ls="--", marker="*", markersize=12, label="Targets"),
-        Line2D([0], [0], color=OBSTACLE_COLOR, lw=2, marker="X", markersize=9, label="Obstacles"),
+        Line2D([0], [0], color=DEVICE_COLORS[0], lw=3, marker="o", markersize=9, label="Robot trajectories"),
+        Line2D([0], [0], color=SAFE_COLOR, lw=2, marker="o", alpha=0.35, markersize=9, label="Final robot safety radius"),
+        Line2D([0], [0], color=TARGET_COLOR, lw=2, ls="--", marker="*", markersize=12, label="Target trajectories"),
+        Line2D(
+            [0],
+            [0],
+            color=OBSTACLE_COLOR,
+            lw=2,
+            marker="X",
+            markerfacecolor=OBSTACLE_MARKER_COLOR,
+            markeredgecolor=OBSTACLE_MARKER_COLOR,
+            markersize=9,
+            label="Obstacle trajectories",
+        ),
+        Line2D([0], [0], color=OBSTACLE_MARGIN_COLOR, lw=6, alpha=0.35, label="Obstacle safety margin"),
     ]
     if len(devices) > 1:
-        handles[0].set_label(f"Devices ({len(devices)})")
+        handles[0].set_label(f"Robot trajectories ({len(devices)})")
     # If any device has leader samples, add a legend handle for the leader ring
     try:
         if any(np.any(d.is_leader) for d in devices):
@@ -646,8 +658,8 @@ def legend_handles_clean(devices: list[Trajectory]) -> list[Line2D]:
 
 def legend_handles_margins(devices: list[Trajectory]) -> list[Line2D]:
     handles = legend_handles_clean(devices)
-    handles[1].set_label("Sampled safety radii")
-    handles.append(Line2D([0], [0], color=OBSTACLE_MARGIN_COLOR, lw=6, alpha=0.35, label="Obstacle margins"))
+    handles[1].set_label("Sampled robot safety radii")
+    handles[4].set_label("Sampled obstacle safety margins")
     return handles
 
 
@@ -687,7 +699,7 @@ def main() -> int:
             obstacles,
             clean_output,
             args.dpi,
-            f"{config.title} movement",
+            f"{beautify_experiment_title(config.title)} movement",
         )
 
         draw_margin_evolution(
@@ -696,7 +708,7 @@ def main() -> int:
             obstacles,
             margins_output,
             args.dpi,
-            f"{config.title}",
+            beautify_experiment_title(config.title),
             args.margin_samples,
         )
 
