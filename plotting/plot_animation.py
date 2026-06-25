@@ -443,7 +443,8 @@ def output_path(output_dir: Path, prefix: str) -> Path:
 def make_gif(config: ExperimentConfig, data: ExperimentData, output: Path, fps: int, dpi: int) -> None:
     limits = compute_limits(config, data)
     has_leader = any(state.is_leader for series in data.robots.values() for state in series.values())
-    fig, ax = plt.subplots(figsize=SPATIAL_FIGSIZE, constrained_layout=True)
+    fig, ax = plt.subplots(figsize=SPATIAL_FIGSIZE)
+    fig.subplots_adjust(left=0.09, right=0.98, top=0.88, bottom=0.28)
 
     def update(time: float):
         draw_frame(ax, config, data, time, limits, has_leader)

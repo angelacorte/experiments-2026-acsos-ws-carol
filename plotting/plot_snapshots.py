@@ -37,7 +37,7 @@ from plot_palette import (
     SAFE_COLOR,
     TARGET_COLOR,
 )
-from plot_style import NODE_LABEL_FONT_SIZE, SPATIAL_FIGSIZE, TARGET_LABEL_FONT_SIZE, apply_plot_style
+from plot_style import LEGEND_FONT_SIZE, NODE_LABEL_FONT_SIZE, SPATIAL_FIGSIZE, TARGET_LABEL_FONT_SIZE, TITLE_FONT_SIZE, apply_plot_style
 
 apply_plot_style(plt)
 ALCHEMIST_ROBOT_MARGIN_RADIUS_FACTOR = 0.5
@@ -66,6 +66,16 @@ class EntitySample:
     radius: float = 0.0
     margin: float = 0.0
     is_leader: bool = False
+
+
+SnapshotBatch = tuple[
+    float,
+    Path,
+    list[EntitySample],
+    list[EntitySample],
+    list[EntitySample],
+    dict[int, list[tuple[float, float]]],
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -127,6 +137,14 @@ def parse_args() -> argparse.Namespace:
         default=0,
         help="Draw the last N samples of each robot trajectory before the snapshot.",
     )
+    parser.add_argument(
+        "--combined-four",
+        action="store_true",
+        help=(
+            "With exactly four snapshot times, generate one 1x4 row plot and one "
+            "2x2 square plot with a shared legend instead of individual snapshots."
+        ),
+    )
     parser.add_argument("--dpi", type=int, default=220, help="Output image DPI.")
     parser.add_argument(
         "--output-format",
@@ -136,7 +154,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--png", action="store_const", const="png", dest="output_format", help="Save only PNG files.")
     parser.add_argument("--show", action="store_true", help="Show figures instead of only saving them.")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.combined_four and len(args.snapshots) != 4:
+        parser.error("--combined-four requires exactly four snapshot times.")
+    return args
 
 
 def parse_scalar(raw_value: str) -> str | float:
@@ -425,7 +446,8 @@ def draw_crown(ax: plt.Axes, x: float, y: float, scale: float = 1.0, color: str 
 
 
 
-def draw_snapshot(
+def render_snapshot_on_axis(
+    ax: plt.Axes,
     config: ExperimentConfig,
     snapshot: float,
     robots: list[EntitySample],
@@ -433,13 +455,8 @@ def draw_snapshot(
     obstacles: list[EntitySample],
     trails: dict[int, list[tuple[float, float]]],
     limits: tuple[float, float, float, float],
-    output_path: Path,
-    dpi: int,
     trail_length: int,
-    show: bool,
 ) -> None:
-    fig, ax = plt.subplots(figsize=SPATIAL_FIGSIZE, constrained_layout=True)
-
     for robot in robots:
         add_circle(ax, robot, robot.comm_distance, COMM_COLOR, 0.2)
     for left, right in communication_links(robots, config.connect_within_distance):
@@ -478,12 +495,80 @@ def draw_snapshot(
         ax.text(target.x, target.y + 0.45, f"T{target.entity_id}", ha="center", va="bottom", fontsize=TARGET_LABEL_FONT_SIZE, color=TARGET_COLOR)
 
     set_limits(ax, limits)
-    ax.set_title(f"{beautify_experiment_title(config.title)} | simulation time={int(round(snapshot))}s")
+    ax.set_title(f"simulation time={int(round(snapshot))}s")
     ax.set_xlabel("x")
     ax.set_ylabel("y")
     ax.set_aspect("equal", adjustable="box")
     ax.grid(True, color="#e4e4e4", linewidth=0.8)
+
+
+def draw_snapshot(
+    config: ExperimentConfig,
+    snapshot: float,
+    robots: list[EntitySample],
+    targets: list[EntitySample],
+    obstacles: list[EntitySample],
+    trails: dict[int, list[tuple[float, float]]],
+    limits: tuple[float, float, float, float],
+    output_path: Path,
+    dpi: int,
+    trail_length: int,
+    show: bool,
+) -> None:
+    fig, ax = plt.subplots(figsize=SPATIAL_FIGSIZE, constrained_layout=True)
+
+    render_snapshot_on_axis(ax, config, snapshot, robots, targets, obstacles, trails, limits, trail_length)
+
+    ax.set_title(f"{beautify_experiment_title(config.title)} | simulation time={int(round(snapshot))}s")
     ax.legend(handles=legend_handles(config, robots, targets, obstacles), loc="upper center", bbox_to_anchor=(0.5, -0.06), ncol=4, frameon=True)
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    save_figure(fig, output_path, dpi)
+    if show:
+        plt.show()
+    plt.close(fig)
+
+
+def draw_combined_snapshots(
+    config: ExperimentConfig,
+    snapshot_batches: list[SnapshotBatch],
+    limits: tuple[float, float, float, float],
+    output_path: Path,
+    dpi: int,
+    trail_length: int,
+    show: bool,
+    layout: tuple[int, int],
+) -> None:
+    rows, cols = layout
+    if rows == 1:
+        width = SPATIAL_FIGSIZE[0] * cols * 0.52
+        height = SPATIAL_FIGSIZE[1] * 0.98
+    else:
+        side = SPATIAL_FIGSIZE[1] * rows * 0.96
+        width = side
+        height = side
+    fig, axes = plt.subplots(rows, cols, figsize=(width, height), constrained_layout=False)
+    if rows == 1:
+        fig.subplots_adjust(left=0.055, right=0.985, top=0.84, bottom=0.25, wspace=0.01)
+    else:
+        fig.subplots_adjust(left=0.07, right=0.98, top=0.87, bottom=0.145, hspace=0.08, wspace=0.015)
+    flat_axes = list(axes.flat) if hasattr(axes, "flat") else [axes]
+
+    for index, (ax, (snapshot, _, robots, targets, obstacles, trails)) in enumerate(zip(flat_axes, snapshot_batches)):
+        render_snapshot_on_axis(ax, config, snapshot, robots, targets, obstacles, trails, limits, trail_length)
+        if rows > 1 and index < cols:
+            ax.set_xlabel("")
+            ax.tick_params(labelbottom=False)
+        if cols > 1 and index % cols != 0:
+            ax.set_ylabel("")
+
+    for ax in flat_axes[len(snapshot_batches) :]:
+        ax.axis("off")
+
+    first_snapshot = snapshot_batches[0]
+    handles = legend_handles(config, first_snapshot[2], first_snapshot[3], first_snapshot[4])
+    fig.suptitle(beautify_experiment_title(config.title), fontsize=TITLE_FONT_SIZE + 4, fontweight="bold", y=0.985)
+    fig.legend(handles=handles, loc="lower center", ncol=4, frameon=True, bbox_to_anchor=(0.5, 0.02), fontsize=LEGEND_FONT_SIZE)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     save_figure(fig, output_path, dpi)
@@ -571,6 +656,11 @@ def output_name(prefix: str, snapshot: float, output_format: str) -> Path:
     return Path(prefix) / f"{prefix}_time-{value}.{output_format}"
 
 
+def combined_output_name(prefix: str, snapshots: list[float], layout_name: str, output_format: str) -> Path:
+    values = "-".join(str(int(round(snapshot))) for snapshot in snapshots)
+    return Path(prefix) / f"{prefix}_times-{values}_{layout_name}.{output_format}"
+
+
 def generated_paths(paths: Iterable[Path]) -> str:
     rendered_paths = []
     for path in paths:
@@ -630,7 +720,39 @@ def main() -> int:
         if not snapshot_batches:
             continue
 
+        if args.combined_four and len(snapshot_batches) != len(args.snapshots):
+            print(
+                f"Warning: skipping combined plots for {config.title} ({config.data_dir}) "
+                "because not all four requested snapshot times are available."
+            )
+            continue
+
         limits = common_limits((robots, targets, obstacles) for _, _, robots, targets, obstacles, _ in snapshot_batches)
+
+        if args.combined_four:
+            combined_specs = [
+                ("row", (1, 4)),
+                ("square", (2, 2)),
+            ]
+            for layout_name, layout in combined_specs:
+                path = args.output_dir / combined_output_name(prefix, args.snapshots, layout_name, args.output_format)
+                try:
+                    draw_combined_snapshots(
+                        config,
+                        snapshot_batches,
+                        limits,
+                        path,
+                        args.dpi,
+                        args.trail,
+                        args.show,
+                        layout,
+                    )
+                except Exception as error:
+                    print(f"Warning: skipping combined {layout_name} plot for {config.title} ({config.data_dir}): {error}")
+                    continue
+
+                all_outputs.append(path)
+            continue
 
         for snapshot, path, robots, targets, obstacles, trails in snapshot_batches:
             try:
