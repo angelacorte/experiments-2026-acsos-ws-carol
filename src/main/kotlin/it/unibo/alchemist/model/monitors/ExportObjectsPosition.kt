@@ -7,12 +7,20 @@ import it.unibo.alchemist.model.molecules.SimpleMolecule
 import it.unibo.alchemist.model.positions.Euclidean2DPosition
 import java.io.File
 import java.io.FileWriter
+import java.io.IOException
 import java.util.Locale
 import kotlin.math.roundToLong
 
+/**
+ * Exports obstacle and target positions to CSV files during a simulation.
+ *
+ * A separate CSV file is maintained for each obstacle and target so their positions can be
+ * reconstructed independently across simulation ticks.
+ *
+ * @property dataPath destination directory for generated CSV files
+ */
 @Suppress("unused")
-class ExportObjectsPosition<T>(val dataPath: String) :
-    OutputMonitor<T, Euclidean2DPosition>  {
+class ExportObjectsPosition<T>(val dataPath: String) : OutputMonitor<T, Euclidean2DPosition> {
 
     private val lastExportedObstacleTick: MutableMap<Int, Long> = mutableMapOf()
     private val lastExportedTargetTick: MutableMap<Int, Long> = mutableMapOf()
@@ -48,7 +56,13 @@ class ExportObjectsPosition<T>(val dataPath: String) :
         appendCsvRow(file, "time,id,x,y", row)
     }
 
-    private fun appendObstacle(obstacleId: Int, time: Time, position: Euclidean2DPosition, radius: Double, margin: Double) {
+    private fun appendObstacle(
+        obstacleId: Int,
+        time: Time,
+        position: Euclidean2DPosition,
+        radius: Double,
+        margin: Double,
+    ) {
         val file = File(dataPath, "obstacle-$obstacleId.csv")
         val row = listOf(
             String.format(Locale.US, "%d", time.toDouble().roundToLong()),
@@ -94,13 +108,17 @@ class ExportObjectsPosition<T>(val dataPath: String) :
                     val tick = time.toDouble().roundToLong()
                     val targetID = try {
                         (target.getConcentration(SimpleMolecule("Target")) as? Number)?.toInt() ?: target.id
-                    } catch (_: Exception) { target.id }
+                    } catch (_: Exception) {
+                        target.id
+                    }
                     if (lastExportedTargetTick[targetID] != tick) {
                         appendTarget(targetID, time, environment.getPosition(target))
                         lastExportedTargetTick[targetID] = tick
                     }
                 }
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            println(e.message)
+        } catch (e: IllegalStateException) {
             println(e.message)
         }
     }
@@ -128,7 +146,9 @@ class ExportObjectsPosition<T>(val dataPath: String) :
                 .forEach { tg ->
                     val id = try {
                         (tg.getConcentration(SimpleMolecule("Target")) as? Number)?.toInt() ?: tg.id
-                    } catch (_: Exception) { tg.id }
+                    } catch (_: Exception) {
+                        tg.id
+                    }
                     val file = File(dataPath, "target-$id.csv")
                     FileWriter(file, false).buffered().use { writer ->
                         writer.appendLine("time,id,x,y")
@@ -136,9 +156,10 @@ class ExportObjectsPosition<T>(val dataPath: String) :
                 }
             lastExportedObstacleTick.clear()
             lastExportedTargetTick.clear()
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            println("Error resetting object CSVs: ${e.message}")
+        } catch (e: IllegalStateException) {
             println("Error resetting object CSVs: ${e.message}")
         }
     }
 }
-

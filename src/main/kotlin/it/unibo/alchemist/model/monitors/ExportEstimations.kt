@@ -1,4 +1,4 @@
-@file:Suppress("TooGenericExceptionCaught")
+@file:Suppress("MatchingDeclarationName", "TooGenericExceptionCaught")
 
 package it.unibo.alchemist.model.monitors
 
@@ -7,9 +7,24 @@ import java.util.Locale
 
 /**
  * One CSV row, kept generic so monitors can export different simulation views without ad-hoc writers.
+ *
+ * @property values values to write as cells in the CSV row
  */
 data class Line(val values: List<Any?>) {
     constructor(vararg values: Any?) : this(values.toList())
+}
+
+private fun writeCsv(path: String, header: String, rowFormatter: (Line) -> String, lines: Iterable<Line>) {
+    val output = File(path)
+    output.parentFile?.let { parent ->
+        if (!parent.exists() && !parent.mkdirs()) error("Cannot create output directory: ${parent.path}")
+    }
+    output.bufferedWriter().use { writer ->
+        writer.appendLine(header)
+        lines.forEach { line ->
+            writer.appendLine(rowFormatter(line))
+        }
+    }
 }
 
 /**
@@ -17,16 +32,7 @@ data class Line(val values: List<Any?>) {
  */
 fun exportToCsv(path: String, header: String, lines: Iterable<Line>) {
     try {
-        val output = File(path)
-        output.parentFile?.let { parent ->
-            if (!parent.exists() && !parent.mkdirs()) error("Cannot create output directory: ${parent.path}")
-        }
-        output.bufferedWriter().use { writer ->
-            writer.appendLine(header)
-            lines.forEach { line ->
-                writer.appendLine(line.values.joinToString(separator = ",") { it.toCsvCell() })
-            }
-        }
+        writeCsv(path, header, { line -> line.values.joinToString(separator = ",") { it.toCsvCell() } }, lines)
     } catch (e: Exception) {
         println("Cannot export CSV at $path: ${e.message}")
     }
@@ -37,16 +43,7 @@ fun exportToCsv(path: String, header: String, lines: Iterable<Line>) {
  */
 fun exportToCsv(path: String, header: String, format: String, lines: Iterable<Line>) {
     try {
-        val output = File(path)
-        output.parentFile?.let { parent ->
-            if (!parent.exists() && !parent.mkdirs()) error("Cannot create output directory: ${parent.path}")
-        }
-        output.bufferedWriter().use { writer ->
-            writer.appendLine(header)
-            lines.forEach { line ->
-                writer.appendLine(format.format(Locale.US, *line.values.toTypedArray()))
-            }
-        }
+        writeCsv(path, header, { line -> format.format(Locale.US, *line.values.toTypedArray()) }, lines)
     } catch (e: Exception) {
         println("Cannot export CSV at $path: ${e.message}")
     }

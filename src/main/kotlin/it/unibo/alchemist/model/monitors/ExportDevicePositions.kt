@@ -9,6 +9,7 @@ import it.unibo.alchemist.model.positions.Euclidean2DPosition
 import it.unibo.collektive.model.Coordinate
 import java.io.File
 import java.io.FileWriter
+import java.io.IOException
 import java.util.Locale
 import kotlin.math.roundToLong
 
@@ -19,6 +20,7 @@ import kotlin.math.roundToLong
  * plotted as trajectories without rewriting the whole file at every monitor callback.
  *
  * @property dataPath destination directory for generated CSV files
+ * @property seed simulation seed associated with this export, kept for monitor configuration compatibility
  */
 @Suppress("unused")
 class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
@@ -42,7 +44,9 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
                     }
                 }
             lastExportedTick.clear()
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            println("Error resetting device CSVs: ${e.message}")
+        } catch (e: IllegalStateException) {
             println("Error resetting device CSVs: ${e.message}")
         }
     }
@@ -52,7 +56,14 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
         if (!outputDir.exists() && !outputDir.mkdirs()) error("Cannot create output directory: $dataPath")
     }
 
-    private fun appendPosition(nodeId: Int, time: Time, position: Coordinate, safeMargin: Double, commDistance: Double, isLeader: Boolean) {
+    private fun appendPosition(
+        nodeId: Int,
+        time: Time,
+        position: Coordinate,
+        safeMargin: Double,
+        commDistance: Double,
+        isLeader: Boolean,
+    ) {
         val outputFile = File(dataPath, "positions_node-$nodeId.csv")
         val writeHeader = !outputFile.exists() || outputFile.length() == 0L
         FileWriter(outputFile, true).buffered().use { writer ->
@@ -60,8 +71,23 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
                 writer.appendLine("time,nodeId,X,Y,safeMargin,commDistance,isLeader")
             }
             val tick = time.toDouble().roundToLong()
+            val formattedPosition = listOf(
+                String.format(Locale.US, "%.4f", position.x),
+                String.format(Locale.US, "%.4f", position.y),
+                String.format(Locale.US, "%.4f", safeMargin),
+                String.format(Locale.US, "%.4f", commDistance),
+            )
             writer.appendLine(
-                "${tick},$nodeId,${String.format(Locale.US, "%.4f", position.x)},${String.format(Locale.US, "%.4f", position.y)},${String.format(Locale.US, "%.4f", safeMargin)},${String.format(Locale.US, "%.4f", commDistance)},${isLeader}"
+                listOf(
+                    tick,
+                    nodeId,
+                    formattedPosition[0],
+                    formattedPosition[1],
+                    formattedPosition[2],
+                    formattedPosition[3],
+                    isLeader,
+                )
+                    .joinToString(","),
             )
         }
     }
@@ -70,7 +96,7 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
         environment: Environment<T?, Euclidean2DPosition>,
         reaction: Actionable<T?>?,
         time: Time,
-        step: Long
+        step: Long,
     ) {
         try {
             ensureOutputDirectory()
@@ -99,7 +125,9 @@ class ExportDevicePositions<T>(val seed: Double = 0.0, val dataPath: String) :
                     lastExportedTick[mid] = tick
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: IOException) {
+            println(e.message)
+        } catch (e: IllegalStateException) {
             println(e.message)
         }
     }
