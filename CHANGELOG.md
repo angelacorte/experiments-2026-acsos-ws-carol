@@ -1,3 +1,43 @@
+## [1.1.0](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.0.1...1.1.0) (2026-06-28)
+
+### Features
+
+* add CSV export utility for simulation monitors ([43a3bad](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/43a3bad2abd91cc090002666edc11660e57e3a81))
+* add device distance plotting ([434566e](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/434566e06d351c1dd5f808bd882def1cacee908c))
+* add ExportDevicePositions monitor for trajectory logging ([922ec7e](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/922ec7ef3c3f1d2df7c806c69c16b4da8fb989de))
+* add general chart generation script ([e5c0339](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/e5c033916fa82bf84798e64c77f076e30462fae7))
+* add leader info ([22b8fb1](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/22b8fb1eb6883e4cd003703f8d3cace879182b67))
+* add leader tracking and visualization in movement plots ([9449510](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/9449510d8537b7a77d53d3405f971f85b2ae4570))
+* add monitors for exporting device and object positions in YAML configurations ([a57c5dc](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/a57c5dc486c8024830500b4a8f926390af6e0c24))
+* add multiple obstacle simulation ([e262bee](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/e262beeb8a9d789f8ce732f4516c3fd8d7620eba))
+* add plot_snapshots for visualizing simulation ([ceeb278](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/ceeb278a6367e756db7383fb09cf0deac7ec79c0))
+* add plot_snapshots for visualizing simulation ([3435cbe](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/3435cbec028434f63f13ec8478ea96ca560f39a9))
+* add plotter for gif generation from snapshots ([d82fa25](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/d82fa25a0f76f86a8ef50d9dacb75a9dd39b5710))
+* add square plot for snapshots ([b30b648](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/b30b64881a36d0df3aaece53df7cc761b9981a44))
+* enhance plot titles and legends with beautified experiment names ([b705696](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/b705696ca67e49a92a5f2c449aba57ca3c998158))
+* enhance process management for chart generation scripts ([9818fc9](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/9818fc9e34e55b5825e9c43f08bc3e4309891bfa))
+* improve script selection for chart generation with user-defined options ([ab5d966](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/ab5d966daf67ef32542d1883da726144cb580fb9))
+* plotting experiment movement ([9074d53](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/9074d53d67fd6575069dd1672ccf3e34b9c99c71))
+* refactor color definitions and add output format option ([a861d6b](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/a861d6b571d1ac89088f10017c68cb9b0b2dcfb6))
+* reset CSV files for devices and objects at simulation start ([e5bb077](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/e5bb077d8535270af281f30366f067faf6a2a253))
+* standardize font sizes and apply shared plot styles across visualization scripts ([55fc1b4](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/55fc1b44c038188ace1a6a8837ba4ec2350730fd))
+* update YAML configurations to include data paths and export monitors ([f7491a4](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/f7491a463f7ea55d5f37263db12c2b00fe44ed79))
+
+### Bug Fixes
+
+* add default config ([a3890e5](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/a3890e5cde373eeae4f42075e08381cc7720bd51))
+* add missing doc and adapt to ktlint ([900b7b0](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/900b7b0572d17564880ddc12de79230e2e568694))
+* remove lateral bar from multiple obstacles plotting ([864fdbb](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/864fdbb78c40a37fd638002c2a3f93ffe432488a))
+* remove step info ([a907028](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/a907028729394790cdecd789af4cbd5174557f25))
+* shorten simulation time ([f16beb5](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/f16beb551ac3c1456be518682f5050179b914aac))
+* update robot parameters and adjust termination times across configurations ([105b6da](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/105b6daae8f6c5ff15962bce9ccb1db9b23b92b4))
+* use viridis and add lateral bar ([66cf871](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/66cf871284fd9f010a43a1f63689534e9c4e2474))
+
+### General maintenance
+
+* add data folder to gitignore ([a10da68](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/a10da68c5fea9f87d501add7781602841ca1b913))
+* **release:** update gradle.properties .env versions to 1.0.1 [skip ci] ([cdbd79d](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/cdbd79d956b5de8549820f2148a503ef1ced6192))
+
 ## [1.0.1](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.0.0...1.0.1) (2026-06-08)
 
 ### Dependency updates
