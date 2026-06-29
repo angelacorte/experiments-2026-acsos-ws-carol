@@ -3,5 +3,5 @@
    "extends": [
       "github>Collektive/renovate-config:kotlin"
    ],
-   "includeForks": true
+   "forkProcessing": "enabled"
 }
