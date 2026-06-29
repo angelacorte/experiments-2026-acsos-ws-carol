@@ -6,12 +6,20 @@ on:
 jobs:
   check-simulations-native:
     strategy:
+      fail-fast: false
+      max-parallel: 2
       matrix:
-        os: [ windows-2022, macos-14, ubuntu-24.04 ]
+        include:
+          - os: windows-2022
+            gurobi-slot: 1
+          - os: macos-14
+            gurobi-slot: 2
+          - os: ubuntu-24.04
+            gurobi-slot: 1
     runs-on: ${{ matrix.os }}
     concurrency:
-      group: sim-check${{ github.workflow }}${{ matrix.os }}${{ github.event.number || github.ref }}
-      cancel-in-progress: true
+      group: gurobi-license-${{ matrix.gurobi-slot }}
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -25,7 +33,7 @@ jobs:
       - uses: DanySK/build-check-deploy-gradle-action@4.0.32
         with:
           build-command: true
-          check-command: ./gradlew check runAllGraphic
+          check-command: ./gradlew check runAllGraphic --no-parallel --max-workers=1
           deploy-command: true
           should-validate-wrapper: ${{ contains('Linux', runner.os) }}
   release:
