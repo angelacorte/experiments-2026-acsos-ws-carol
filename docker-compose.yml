@@ -1,6 +1,6 @@
 services:
   prepare:
-    image: alpine:3.23.5
+    image: alpine:3.24.1
     volumes:
       - .:/experiment:rw
     entrypoint: /bin/sh -c
@@ -39,7 +39,7 @@ services:
     depends_on:
       charts:
         condition: service_completed_successfully
-    image: alpine:3.23.5
+    image: alpine:3.24.1
     volumes:
       - .:/experiment:rw
     entrypoint: /bin/sh -c
