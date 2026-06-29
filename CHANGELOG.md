@@ -1,3 +1,14 @@
+## [1.1.2](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.1...1.1.2) (2026-06-29)
+
+### Dependency updates
+
+* **core-deps:** update collektive to v28.3.0 ([2030e3b](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/2030e3be235b373120b901cfc601f04cebea6744))
+* **deps:** update dependency com.github.ben-manes.caffeine:caffeine to v3.2.4 ([11d8b1e](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/11d8b1e8b5540e89ca3b435ffcbb609e51630acb))
+
+### General maintenance
+
+* **release:** update gradle.properties .env versions to 1.1.1 [skip ci] ([4148a0c](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/4148a0cc1888f5f40e950e2a2edf06e6869222e1))
+
 ## [1.1.1](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.0...1.1.1) (2026-06-29)
 
 ### Dependency updates
