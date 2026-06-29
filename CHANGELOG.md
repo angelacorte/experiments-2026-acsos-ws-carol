@@ -1,3 +1,23 @@
+## [1.1.1](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.0...1.1.1) (2026-06-29)
+
+### Dependency updates
+
+* **deps:** update alchemist to v43.0.56 ([51e1b2d](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/51e1b2df14e328ac7481f8fde9ae8b65375c689a))
+* **deps:** update gradle to v9.6.1 ([d5d11c9](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/d5d11c964aa7fb7748974c09763073d2aeaa8201))
+
+### Bug Fixes
+
+* **ci:** limit Gurobi simulations concurrency ([6cf5a86](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/6cf5a86241dd0b7b09bd389da337a06fa2a7043c))
+
+### Build and continuous integration
+
+* **deps:** update actions/checkout action to v7 ([e0ab54e](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/e0ab54ecd8f1a7344277241d0059a8dd19bc8b4e))
+
+### General maintenance
+
+* **config:** migrate config renovate.json ([16a8456](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/16a8456a83d568dbc381e2eb9f73228985892509))
+* **release:** update gradle.properties .env versions to 1.1.0 [skip ci] ([acfa13a](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/acfa13acc21b2023560cc659f54c1161cbbf1092))
+
 ## [1.1.0](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.0.1...1.1.0) (2026-06-28)
 
 ### Features
