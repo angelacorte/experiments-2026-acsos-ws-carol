@@ -1,3 +1,17 @@
+## [1.1.3](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.2...1.1.3) (2026-06-30)
+
+### Dependency updates
+
+* **core-deps:** update dependency org.jetbrains.kotlin.jvm to v2.4.0 ([f181bbb](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/f181bbb37ef810c1edfb6cf8779a26b9fd7046d3))
+* **deps:** update alchemist to v43.1.5 ([a79e0d3](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/a79e0d3ccf2f775b1abe789ad62e91eeeb09e2b5))
+* **deps:** update alpine docker tag to v3.23.5 ([7ae981d](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/7ae981db727811e7c117b9fe01e503f49eb256e7))
+* **deps:** update alpine docker tag to v3.24.1 ([0c963bd](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/0c963bd34fce94482cd754ea53a3f09b285d7d28))
+* **deps:** update dependency matplotlib to v3.11.0 ([59fa761](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/59fa761768681c30cb22383202a5946dc4d4950a))
+
+### General maintenance
+
+* **release:** update gradle.properties .env versions to 1.1.2 [skip ci] ([8b010b6](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/8b010b6a6f87a53b700b3baba9876ffc7acb1ab2))
+
 ## [1.1.2](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.1...1.1.2) (2026-06-29)
 
 ### Dependency updates
