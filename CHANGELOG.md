@@ -1,3 +1,13 @@
+## [1.1.4](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.3...1.1.4) (2026-06-30)
+
+### Bug Fixes
+
+* **ci:** missing gh release config ([8905387](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/8905387d99da9ea8ae111d8d6898aeaea068cb43))
+
+### General maintenance
+
+* **release:** update gradle.properties .env versions to 1.1.3 [skip ci] ([691765b](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/691765b575c40aef35ee45415ce0bd108e7e3c1b))
+
 ## [1.1.3](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.2...1.1.3) (2026-06-30)
 
 ### Dependency updates
