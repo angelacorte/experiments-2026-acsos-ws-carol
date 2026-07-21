@@ -1,3 +1,25 @@
+## [1.1.5](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.4...1.1.5) (2026-07-21)
+
+### Dependency updates
+
+* **core-deps:** update collektive to v28.3.1 ([7845bdf](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/7845bdf0cdddf4bed47305a13a9b538e5190b953))
+* **core-deps:** update dependency org.jetbrains.kotlin.jvm to v2.4.10 ([b1993dd](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/b1993dd1777692c7a2e1581de85ca00cb279944d))
+* **deps:** update dependency matplotlib to v3.11.1 ([36f9b53](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/36f9b53b30653c296ac7bd704689bba4d3d61024))
+* **deps:** update dependency xarray to v2026.7.0 ([379e859](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/379e859935970d279d051148bea4a0fca72a802c))
+* **deps:** update plugin gitsemver to v7.0.23 ([1cc5a84](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/1cc5a84a9b99187ed495f9f07f6389378168f57c))
+* **deps:** update plugin kotlin-qa to v1.8.0 ([d7a5bad](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/d7a5bad27a3c581dd801032e138e65ea2e00f8b5))
+* **deps:** update python docker tag to v3.14.6 ([2cedf6d](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/2cedf6da142184a3a9c83ce301506589d1373969))
+
+### Build and continuous integration
+
+* **deps:** update actions/checkout action to v7.0.1 ([8febe10](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/8febe1012af0106a2f2af9549453aa7569e24383))
+* **deps:** update danysk/build-check-deploy-gradle-action action to v4.0.40 ([cfc19e3](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/cfc19e354fcde2db40ea92dfe68beb3af6bfd755))
+* **deps:** update danysk/build-check-deploy-gradle-action action to v4.0.41 ([52f9212](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/52f9212acae18b281670074a002b845faf60a1ae))
+
+### General maintenance
+
+* **release:** update gradle.properties .env versions to 1.1.4 [skip ci] ([5d3ca21](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/5d3ca2179577a9db93c3aac51a16156c2b6f9de4))
+
 ## [1.1.4](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.3...1.1.4) (2026-06-30)
 
 ### Bug Fixes
