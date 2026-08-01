@@ -30,7 +30,7 @@ jobs:
           ${{ secrets.GRB_LICENSE_FILE }}
           EOF
           echo "GRB_LICENSE_FILE=$(pwd)/gurobi.lic" >> $GITHUB_ENV
-      - uses: DanySK/build-check-deploy-gradle-action@4.0.41
+      - uses: DanySK/build-check-deploy-gradle-action@4.0.42
         with:
           build-command: true
           check-command: ./gradlew check runAllGraphic --no-parallel --max-workers=1
