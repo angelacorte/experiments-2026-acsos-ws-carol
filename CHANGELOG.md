@@ -1,3 +1,17 @@
+## [1.1.6](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.5...1.1.6) (2026-08-01)
+
+### Dependency updates
+
+* **core-deps:** update collektive to v28.3.2 ([dfc27d7](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/dfc27d772edb10b01a97976a5399f3662ccc8386))
+
+### Build and continuous integration
+
+* **deps:** update danysk/build-check-deploy-gradle-action action to v4.0.42 ([baa89c0](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/baa89c0409d404e14339d12aacf1db85cfa4831e))
+
+### General maintenance
+
+* **release:** update gradle.properties .env versions to 1.1.5 [skip ci] ([81838f1](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/commit/81838f16b2c9ed2d7768d2273511a4d157de8926))
+
 ## [1.1.5](https://github.com/angelacorte/experiments-2026-acsos-ws-carol/compare/1.1.4...1.1.5) (2026-07-21)
 
 ### Dependency updates
