@@ -3,7 +3,7 @@ kotlin = "2.4.10"
 alchemist = "43.1.5"
 caffeine = "3.2.4"
 collektive = "28.3.2"
-gurobi = "13.0.2"
+gurobi = "13.0.3"
 
 [libraries]
 alchemist = { module = "it.unibo.alchemist:alchemist", version.ref = "alchemist" }
