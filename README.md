@@ -1,3 +1,22 @@
+Experiment repository related to the paper: 
+# Toward Safe Aggregate Computing: A Distributed Control-Theoretic Safety Filter for Robot Swarms
+
+### Authors
+
+| **Angela Cortecchia** (*)  | **Alessandro Papadopoulos** (x)  | **Danilo Pianini** (*)  |
+|:--------------------------:|:----------------------:|:---------------------:|
+| angela.cortecchia@unibo.it | alessandro.papadopoulos@mdu.se | danilo.pianini@unibo.it |
+
+(*)
+*Department of Computer Science and Engineering 
+Alma Mater Studiorum --- Università di Bologna - Cesena, Italy*
+
+(x)
+*Department of Computer Science and Engineering
+Mälardalen University, Västerås, Sweden*
+
+---
+
 # CAROL: Coordinated Aggregate Robotics with Online control Lyapunov and barrier functions
 
 [![Kotlin](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fangelacorte%2Fexperiments-2026-acsos-ws-carol%2Fmaster%2Fgradle%2Flibs.versions.toml&query=%24.versions.kotlin&label=Kotlin&color=blue)](https://kotlinlang.org)
