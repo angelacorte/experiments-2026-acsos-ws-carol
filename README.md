@@ -1,3 +1,6 @@
+Archived experiment repository: follow the project development at [angelacorte/carol-experiments](https://github.com/angelacorte/carol-experiments) repository.
+---
+
 Experiment repository related to the paper: 
 # Toward Safe Aggregate Computing: A Distributed Control-Theoretic Safety Filter for Robot Swarms
 
